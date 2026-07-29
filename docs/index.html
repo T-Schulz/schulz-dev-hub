@@ -113,15 +113,38 @@
             <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
             <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
             
-            <!-- Visuelle Technologie-Badges von Shields.io -->
-            <div class="badge-container">
-                <img class="badge" src="https://shields.io" alt="Python">
-                <img class="badge" src="https://shields.io" alt="Git">
-                <img class="badge" src="https://shields.io" alt="VS Code">
-                <img class="badge" src="https://shields.io" alt="Markdown">
-                <img class="badge" src="https://shields.io" alt="HTML5">
-                <img class="badge" src="https://shields.io" alt="CSS3">
-            </div>
+            <!-- START_BADGES -->
+<div class="badge-container" id="dynamicBadges">
+    <!-- Die Schilder werden hier gleich automatisch reingeladen -->
+</div>
+
+<script>
+    // Wir bauen uns die Adressbausteine sicher als Text zusammen
+    const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
+    
+    // Hier definieren wir Name, Farbe und Logo für jedes Schild
+    const technologien = [
+        { name: "Python", farbe: "3776AB", logo: "python" },
+        { name: "GIT", farbe: "F05032", logo: "git" },
+        { name: "Visual_Studio_Code", farbe: "007ACC", logo: "visual-studio-code" },
+        { name: "Markdown", farbe: "000000", logo: "markdown" },
+        { name: "HTML5", farbe: "E34F26", logo: "html5" },
+        { name: "CSS3", farbe: "1572B6", logo: "css3" }
+    ];
+
+    const container = document.getElementById("dynamicBadges");
+    
+    // Schleife baut die Bilder im Browser zusammen, wenn die Seite lädt
+    technologien.forEach(tech => {
+        const img = document.createElement("img");
+        img.className = "badge";
+        img.alt = tech.name;
+        // Erzeugt den finalen Link: basisUrl + Name-Farbe?style=flat&logo=logoName&logoColor=white
+        img.src = basisUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
+        container.appendChild(img);
+    });
+</script>
+<!-- ENDE_BADGES -->
         </div>
 
         <!-- Projekt-Kacheln -->
@@ -137,7 +160,7 @@
                 <h3>🧪 Sandbox & Labor</h3>
                 <p>Isolierter Spielplatz für das Testen neuer Web-Frameworks und Programmiersprachen.</p>
                 <a class="btn-link" href="https://t-schulz.github.io/schulz-dev-hub/" target="_blank">Projekte ansehen</a>
-            </div>co
+            </div>
         </div>
     </div>
 
