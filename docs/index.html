@@ -10,12 +10,16 @@
             --text: #333;
             --card-bg: #ffffff;
             --accent: #007bff;
+            --accent-hover: #0056b3;
+            --border: #e0e0e0;
         }
         [data-theme="dark"] {
             --bg: #121212;
             --text: #e0e0e0;
             --card-bg: #1e1e1e;
             --accent: #00adb5;
+            --accent-hover: #00f5ff;
+            --border: #333333;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -37,58 +41,113 @@
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        button {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+        .btn-toggle {
+            background-color: transparent;
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 8px 15px;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
         .card {
             background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .badge {
+            height: 24px;
+            border-radius: 4px;
         }
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
-        a { color: var(--accent); text-decoration: none; font-weight: bold; }
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .btn-link {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white !important;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background 0.2s, transform 0.1s;
+            text-align: center;
+        }
+        .btn-link:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        h2, h3 { margin-top: 0; }
+        p { line-height: 1.6; color: var(--text); opacity: 0.9; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🌐 Mein Dev-Hub</h1>
-            <button id="themeToggle">🌓 Modus wechseln</button>
+            <h1>🌐 dev-hub</h1>
+            <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
         </header>
 
+        <!-- Haupt-Willkommensbox -->
         <div class="card">
-            <h2>Willkommen auf meinem zentralen Dashboard</h2>
-            <p>Hier koordiniere ich meine Projekte und Experimente.</p>
+            <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
+            <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
+            
+            <!-- Visuelle Technologie-Badges von Shields.io -->
+            <div class="badge-container">
+                <img class="badge" src="https://shields.io" alt="Python">
+                <img class="badge" src="https://shields.io" alt="Git">
+                <img class="badge" src="https://shields.io" alt="VS Code">
+                <img class="badge" src="https://shields.io" alt="Markdown">
+                <img class="badge" src="https://shields.io" alt="HTML5">
+                <img class="badge" src="https://shields.io" alt="CSS3">
+            </div>
         </div>
 
+        <!-- Projekt-Kacheln -->
         <div class="grid">
             <div class="card">
-                <h3>📁 Skripte</h3>
-                <p>Nützliche Helfer zur Systemüberwachung.</p>
-                <a href="https://github.com">Zum Ordner →</a>
+                <h3>📁 Skripte & Automation</h3>
+                <p>Enthält mein Systemdiagnose-Tool <code>sys_check.py</code> und tägliche Helfer.</p>
+                <!-- WICHTIG: Ersetze DEIN-USERNAME im Link -->
+                <a class="btn-link" href="https://github.com" target="_blank">Skripte ansehen</a>
             </div>
+            
             <div class="card">
-                <h3>🧪 Sandbox</h3>
-                <p>Hier teste ich neue Web-Technologien.</p>
-                <a href="#">Projekte ansehen →</a>
+                <h3>🧪 Sandbox & Labor</h3>
+                <p>Isolierter Spielplatz für das Testen neuer Web-Frameworks und Programmiersprachen.</p>
+                <a class="btn-link" href="https://github.com" target="_blank">Projekte ansehen</a>
             </div>
         </div>
     </div>
 
     <script>
         const btn = document.getElementById("themeToggle");
+        // Prüfe, ob der User das System auf Dark-Mode stehen hat
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute("data-theme", "dark");
+        }
+        
         btn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme");
             const newTheme = currentTheme === "dark" ? "light" : "dark";
