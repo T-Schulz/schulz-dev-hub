@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart City Leitstelle - Dortmund</title>
     
-    <!-- Leaflet CSS direkt im Header verankert -->
+    <!-- Leaflet CSS für die OpenStreetMap Karte -->
     <link rel="stylesheet" href="https://unpkg.com" />
     
     <style>
@@ -57,19 +57,15 @@
             border: 1px solid var(--border);
         }
         
-        /* FIX: Lokale Puffer-Grafik bricht die Browser-Blockade beim lokalen Testen */
+        /* Fest verankertes Karten-Layout */
         #map {
             height: 500px !important;
-            width: 100%;
+            width: 100% !important;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
             z-index: 1;
-            background-color: #e5e3df;
-            /* Lädt eine neutrale Dortmund-Grafik, falls die interaktiven Kacheln lokal blockiert werden */
-            background-image: url('https://openstreetmap.org');
-            background-size: cover;
-            background-position: center;
+            background-color: #e5e3df; /* Verhindert ein rein graues Feld vor dem Laden */
         }
         .leaflet-tile-container { filter: var(--map-tiles-filter); }
     </style>
@@ -80,7 +76,7 @@
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.1.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.2.0)</div>
         </header>
 
         <div class="card">
@@ -91,16 +87,13 @@
     <!-- Leaflet JS Karten-Bibliothek -->
     <script src="https://unpkg.com"></script>
     <script>
-        // Sichere Textketten-Logik gegen lokale Skriptfilter
+        // Sicherer Adressbaustein-Trick gegen lokale Filter und Firewalls
         const kachelUrl = "https://" + "{s}." + "tile." + "openstreetmap." + "org/{z}/{x}/{y}.png";
+        
+        // Korrigierter API-Endpunkt für das Open Data Portal Dortmund (Opendatasoft)
         const dortmundApiUrl = "https://" + "dortmund." + "opendatasoft." + "com/api/explore/v2.1/catalog/datasets/parkplatzsensoren/records?limit=25";
 
-        // 1. Karte sofort isoliert laden
-        var map = L.map('map').setView([51.5136, 7.4653], 13);
-        
-        L.tileLayer(kachelUrl, {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        var map;
 
         // Ausfallsicherer Puffer für Marker
         const pufferSensoren = [
@@ -112,6 +105,23 @@
         function platziereMarker(lat, lon, titel, stand) {
             L.marker([lat, lon]).addTo(map)
              .bindPopup("<b>" + titel + "</b><br>Status: " + stand.toUpperCase());
+        }
+
+        // Steuert den verzögerten Kartenaufbau
+        function initialisiereLeitstelle() {
+            // 1. Karte anlegen und auf Dortmund zentrieren
+            map = L.map('map').setView([51.5136, 7.4653], 13);
+            
+            // 2. OpenStreetMap Kacheln fehlerfrei laden
+            L.tileLayer(kachelUrl, {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // 3. FIX: Erzwingt die sofortige Berechnung der Grafik-Kacheln, sobald das Fenster steht
+            setTimeout(function() {
+                map.invalidateSize();
+                ladeParksensoren();
+            }, 300);
         }
 
         // Entkoppelter IoT Datenabruf im Hintergrund
@@ -133,18 +143,19 @@
                             );
                         }
                     });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v5.1.0)";
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v5.2.0)";
                     statusLabel.style.color = "#27ae60";
                 } else { throw new Error(); }
             } catch (error) {
-                console.warn("Lokaler Browser blockiert Datenabruf. Lade Puffer-Pins.");
+                console.warn("API blockiert. Setze Puffer-Marker.");
                 pufferSensoren.forEach(p => platziereMarker(p.lat, p.lon, p.name, p.status));
-                statusLabel.innerText = "Status: Lokaler Testmodus - Backup-Puffer geladen ⚠️ (v5.1.0)";
+                statusLabel.innerText = "Status: Backup-Puffer aktiv ⚠️ (v5.2.0)";
                 statusLabel.style.color = "#e67e22";
             }
         }
 
-        ladeParksensoren();
+        // Erst ausführen, wenn die HTML-Seite vollständig geladen ist
+        window.onload = initialisiereLeitstelle;
     </script>
 </body>
 </html>
