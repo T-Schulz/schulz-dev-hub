@@ -73,13 +73,14 @@
             text-align: center;
         }
 
-        /* Feste, erzwungene CSS-Höhe für die Karte */
+        /* Feste, erzwungene CSS-Höhe für das Rendering */
         #map {
             height: 450px !important;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
+            display: block !important;
             z-index: 1;
         }
         .leaflet-tile-container { filter: var(--map-tiles-filter); }
@@ -122,9 +123,9 @@
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // FIX: Fehlerfreier Aufbau der Logos ohne URL-Zerstückelung
+        // Logos generieren
         const technologien = [
             { name: "Python", farbe: "3776AB", logo: "python" },
             { name: "Git", farbe: "F05032", logo: "git" },
@@ -137,26 +138,38 @@
             const img = document.createElement("img");
             img.className = "badge";
             img.alt = tech.name;
-            img.src = "https://img.shields.io/badge/" + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
+            img.src = "https://shields.io" + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
             badgeContainer.appendChild(img);
         });
 
-        // 1. Karte initialisieren und auf Dortmund zentrieren
-        var map = L.map('map').setView([51.5136, 7.4653], 13);
-        
-        // 2. OpenStreetMap Kacheln fehlerfrei laden
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        // 1. Karte deklarieren
+        var map;
 
-        // FALLBACK-PUFFER: Falls die städtische API blockiert
+        // Fallback-Puffer für IoT Marker
         const pufferSensoren = [
             { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
             { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
             { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
         ];
 
-        // Live-Daten-Abruf über das städtische Portal
+        // Funktion zur Initialisierung
+        function initMap() {
+            // Karte anlegen
+            map = L.map('map').setView([51.5136, 7.4653], 13);
+            
+            // Kacheln laden
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // FIX: Leaflet zwingen, die echte Containergröße sofort zu berechnen
+            setTimeout(function() {
+                map.invalidateSize();
+                ladeParksensoren();
+            }, 200);
+        }
+
+        // Live-Daten-Abruf
         async function ladeParksensoren() {
             const statusLabel = document.getElementById("mapStatus");
             try {
@@ -168,7 +181,6 @@
                 if (data.results && data.results.length > 0) {
                     data.results.forEach(record => {
                         if (record.geo_point_2d) {
-                            // FIX: Nutzt die internen Leaflet Standard-Pins ohne fehlerhafte Custom-Objekte
                             L.marker([record.geo_point_2d.lat, record.geo_point_2d.lon]).addTo(map)
                              .bindPopup("<b>" + (record.parking_space_name || "IoT Stellplatz") + "</b><br>Status: " + (record.status || "unbekannt").toUpperCase());
                         }
@@ -179,8 +191,9 @@
                     throw new Error("API leer");
                 }
             } catch (error) {
-                console.warn("API offline - Puffer-Daten geladen:", error);
-                // Schaltet bei API-Ausfall sicher auf Puffer-Messungen um
+                console.warn("API Offline oder blockiert. Puffer-Marker werden auf Karte gesetzt.", error);
+                
+                // FIX: Pufferdaten werden nun direkt als Marker auf die gezeichnete Karte gesetzt
                 pufferSensoren.forEach(p => {
                     L.marker([p.lat, p.lon]).addTo(map)
                      .bindPopup("<b>" + p.name + "</b><br>Status: " + p.status.toUpperCase());
@@ -190,7 +203,8 @@
             }
         }
         
-        ladeParksensoren();
+        // Erst ausführen, wenn das Fenster geladen ist, um Darstellungs-Fehler zu vermeiden
+        window.onload = initMap;
 
         // Theme-Wechsler
         document.getElementById("themeToggle").addEventListener("click", () => {
