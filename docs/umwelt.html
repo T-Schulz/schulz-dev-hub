@@ -4,49 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umwelt & Wetter - Dev-Hub</title>
+    <title>Umwelt - Dev-Hub</title>
     <style>
-        :root {
-            --bg: #f4f4f9; --text: #333; --card-bg: #ffffff;
-            --accent: #27ae60; --accent-hover: #219150; --border: #e0e0e0;
-        }
-        [data-theme="dark"] {
-            --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e;
-            --accent: #2ecc71; --accent-hover: #40d47e; --border: #333333;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg); color: var(--text); padding: 40px 20px; transition: background 0.3s, color 0.3s;
-        }
+        :root { --bg: #f4f4f9; --text: #333; --card-bg: #ffffff; --accent: #27ae60; --border: #e0e0e0; }
+        [data-theme="dark"] { --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --accent: #2ecc71; --border: #333333; }
+        body { font-family: sans-serif; background-color: var(--bg); color: var(--text); padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 30px; }
-        .btn-toggle { background-color: transparent; color: var(--text); border: 2px solid var(--border); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
-        [data-theme="dark"] .btn-link { background-color: #444; }
-        h2, h3 { margin-top: 0; }
-        p { line-height: 1.6; }
-        .data-list { display: flex; flex-direction: column; gap: 10px; }
+        .btn-toggle { background-color: transparent; color: var(--text); border: 2px solid var(--border); padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
+        .btn-link { display: inline-block; background-color: #333; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
         .data-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
     </style>
 </head>
 <body>
     <div class="container">
-        <a class="btn-link" href="index.html">← Zurück zur Zentrale</a>
+        <a class="btn-link" href="index.html">← Zurück</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
             <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
         </header>
 
         <div class="card">
-            <h2>Luftqualität & Klimasensoren</h2>
-            <p>Live-Messdaten des offiziellen Klimamessnetzes der Stadt Dortmund.</p>
-        </div>
-
-        <div class="card">
-            <h3>📈 Aktuelle Stationswerte (Dortmund)</h3>
-            <div class="data-list" id="klimaDatenContainer">
-                <div class="data-row"><span>Lade Live-Sensordaten...</span></div>
+            <h3>📈 Aktuelle städtische Klimasensoren (Dortmund)</h3>
+            <div id="klimaDatenContainer">
+                <div class="data-row"><span>Lade Echtzeitdaten...</span></div>
             </div>
         </div>
     </div>
@@ -54,7 +36,6 @@
     <script>
         async function ladeKlimaDaten() {
             try {
-                // Holt Klimadaten über die offizielle API v2.1
                 const response = await fetch("https://opendatasoft.com");
                 const data = await response.json();
                 const container = document.getElementById("klimaDatenContainer");
@@ -72,17 +53,15 @@
                         container.appendChild(row);
                     });
                 } else {
-                    container.innerHTML = "<div class='data-row'>Keine aktuellen Sensordaten im städtischen Feed.</div>";
+                    container.innerHTML = "<div class='data-row'>Keine Daten im städtischen Daten-Feed gefunden.</div>";
                 }
             } catch(e) {
-                console.error(e);
-                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Fehler beim Datenabruf der Klimasensoren.</div>";
+                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Abruf-Fehler.</div>";
             }
         }
         ladeKlimaDaten();
 
-        const btn = document.getElementById("themeToggle");
-        btn.addEventListener("click", () => {
+        document.getElementById("themeToggle").addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", currentTheme);
         });
