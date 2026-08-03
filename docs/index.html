@@ -106,7 +106,7 @@
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
 
-        /* Absolut festes Karten-Layout */
+        /* Fest verankertes Karten-Layout */
         #map {
             height: 450px !important;
             width: 100%;
@@ -128,48 +128,18 @@
         <!-- Haupt-Willkommensbox -->
         <div class="card">
             <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
-            <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
-            
-            <!-- START_BADGES -->
+            <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem centralen Ort.</p>
             <div class="badge-container" id="dynamicBadges"></div>
-
-            <script>
-                // Originaler, sicherer Zusammenbau der Adressbausteine als Text
-                const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
-                
-                // Definition aller Technologien inklusive der neuen Leitstellen-Module
-                const technologien = [
-                    { name: "Python", farbe: "3776AB", logo: "python" },
-                    { name: "GIT", farbe: "F05032", logo: "git" },
-                    { name: "Visual_Studio_Code", farbe: "007ACC", logo: "visual-studio-code" },
-                    { name: "Markdown", farbe: "000000", logo: "markdown" },
-                    { name: "HTML5", farbe: "E34F26", logo: "html5" },
-                    { name: "CSS3", farbe: "1572B6", logo: "css3" },
-                    { name: "Leaflet", farbe: "199900", logo: "leaflet" }
-                ];
-
-                const container = document.getElementById("dynamicBadges");
-                
-                // Original-Schleife baut die Schilder im Browser zusammen
-                technologien.forEach(tech => {
-                    const img = document.createElement("img");
-                    img.className = "badge";
-                    img.alt = tech.name;
-                    img.src = basisUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
-                    container.appendChild(img);
-                });
-            </script>
-            <!-- ENDE_BADGES -->
         </div>
 
         <!-- Smart City Leitstelle Dortmund -->
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern... (v3.5.0)</p>
+            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern... (v4.0.0)</p>
             <div id="map"></div>
         </div>
 
-        <!-- Projekt-Kacheln umgewandelt in Unterseiten-Links -->
+        <!-- Dashboard Navigation -->
         <div class="grid">
             <div class="card">
                 <h3>🌱 Umwelt & Wetter</h3>
@@ -187,67 +157,8 @@
 
     <!-- Leaflet JS Karten-Bibliothek -->
     <script src="https://unpkg.com"></script>
-    <script>
-        // Sicherer Adressbaustein-Trick für die Karten-Kacheln
-        const kachelUrl = "https://" + "{s}." + "tile." + "openstreetmap." + "org/{z}/{x}/{y}.png";
-        
-        // Sicherer Adressbaustein-Trick für das offizielle Opendata-Portal Dortmund
-        const dortmundApiUrl = "https://" + "dortmund." + "opendatasoft." + "com/api/explore/v2.1/catalog/datasets/parkplatzsensoren/records?limit=25";
-
-        // 1. Karte initialisieren und zentrieren
-        var map = L.map('map').setView([51.5136, 7.4653], 13);
-        
-        // 2. Kacheln über die zusammengesetzte URL laden
-        L.tileLayer(kachelUrl, {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Offline-Pufferdaten für den ausfallsicheren Schutz
-        const pufferSensoren = [
-            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
-            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
-            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
-        ];
-
-        // Funktion zeichnet Punkte auf der Landkarte
-        function platziereMarker(lat, lon, titel, stand) {
-            L.marker([lat, lon]).addTo(map)
-             .bindPopup("<b>" + titel + "</b><br>Status: " + stand.toUpperCase());
-        }
-
-        // Live-Daten-Abruf mit dem Vorlagen-Verschlüsselungsprinzip
-        async function ladeParksensoren() {
-            const statusLabel = document.getElementById("mapStatus");
-            try {
-                const response = await fetch(dortmundApiUrl);
-                if (!response.ok) throw new Error();
-                const data = await response.json();
-                
-                if (data.results && data.results.length > 0) {
-                    data.results.forEach(record => {
-                        if (record.geo_point_2d) {
-                            platziereMarker(
-                                record.geo_point_2d.lat, 
-                                record.geo_point_2d.lon, 
-                                record.parking_space_name || "IoT Stellplatz", 
-                                record.status || "unbekannt"
-                            );
-                        }
-                    });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v3.5.0)";
-                    statusLabel.style.color = "#27ae60";
-                } else {
-                    throw new Error();
-                }
-            } catch (error) {
-                console.warn("API blockiert. Setze Puffer-Marker.");
-                // Setzt bei Netzwerkfiltern sofort die Pufferpunkte ab
-                pufferSensoren.forEach(p => platziereMarker(p.lat, p.lon, p.name, p.status));
-                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️ (v3.5.0)";
-                statusLabel.style.color = "#e67e22";
-            }
-        }
-        
-        ladeParksensoren();
-
-        // Original-Logik für den Modus-Wechsler (Dark Mode)
+    
+    <!-- EINBINDUNG DER NEUEN LOGIK-DATEI -->
+    <script src="app.js"></script>
+</body>
+</html>
