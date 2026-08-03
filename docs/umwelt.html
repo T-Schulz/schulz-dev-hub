@@ -54,6 +54,7 @@
     <script>
         async function ladeKlimaDaten() {
             try {
+                // Holt Klimadaten über die offizielle API v2.1
                 const response = await fetch("https://opendatasoft.com");
                 const data = await response.json();
                 const container = document.getElementById("klimaDatenContainer");
@@ -62,8 +63,8 @@
                 if(data.results && data.results.length > 0) {
                     data.results.forEach(rec => {
                         const station = rec.station_name || "Klimastation";
-                        const temp = rec.air_temperature ?? "--";
-                        const hum = rec.relative_humidity ?? "--";
+                        const temp = rec.air_temperature !== undefined ? rec.air_temperature : "--";
+                        const hum = rec.relative_humidity !== undefined ? rec.relative_humidity : "--";
                         
                         const row = document.createElement("div");
                         row.className = "data-row";
@@ -71,16 +72,15 @@
                         container.appendChild(row);
                     });
                 } else {
-                    container.innerHTML = "<div class='data-row'>Keine aktuellen Sensordaten verfügbar.</div>";
+                    container.innerHTML = "<div class='data-row'>Keine aktuellen Sensordaten im städtischen Feed.</div>";
                 }
             } catch(e) {
                 console.error(e);
-                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Fehler beim Datenabruf.</div>";
+                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Fehler beim Datenabruf der Klimasensoren.</div>";
             }
         }
         ladeKlimaDaten();
 
-        // Theme Toggle
         const btn = document.getElementById("themeToggle");
         btn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";

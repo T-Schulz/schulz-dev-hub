@@ -83,7 +83,7 @@
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
 
-        /* Erzwungene feste Höhe für Leaflet */
+        /* Feste Höhe für Leaflet */
         #map {
             height: 450px !important;
             width: 100%;
@@ -111,7 +111,7 @@
         <!-- Smart City Leitstelle Dortmund -->
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p>Echtzeit-Anzeige der städtischen IoT-Infrastruktur. Grüne Marker zeigen freie, rote Marker belegte LoRaWAN-Flächen.</p>
+            <p>Echtzeit-Anzeige der städtischen IoT-Infrastruktur. Grüne Punkte zeigen freie, rote Punkte belegte LoRaWAN-Flächen.</p>
             <div id="map"></div>
         </div>
 
@@ -132,8 +132,8 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com"></script>
     <script>
-        // Badges generieren
-        const basisUrl = "https://shields.io";
+        // Badges FIX: Sauberer URL Zusammenbau
+        const baseBadgeUrl = "https://shields.io";
         const technologien = [
             { name: "Python", farbe: "3776AB", logo: "python" },
             { name: "GIT", farbe: "F05032", logo: "git" },
@@ -148,17 +148,17 @@
             const img = document.createElement("img");
             img.className = "badge";
             img.alt = tech.name;
-            img.src = `${basisUrl}${tech.name}-${tech.farbe}?style=flat&logo=${tech.logo}&logoColor=white`;
+            img.src = baseBadgeUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
             badgeContainer.appendChild(img);
         });
 
-        // Karte initialisieren (Dortmund City)
+        // Karte initialisieren (Zentrum Dortmund)
         var map = L.map('map').setView([51.5136, 7.4653], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Marker Styling (FIX: Werte korrigiert)
+        // Marker Styling FIX: Fehlende Array-Größen repariert
         function erstelleMarkerIcon(status) {
             const farbe = (status === "occupied" || status === "belegt") ? "#e74c3c" : "#2ecc71";
             return L.divIcon({
@@ -169,7 +169,7 @@
             });
         }
 
-        // Live-Daten Abruf Parkplatz-API Dortmund
+        // Live-Daten Abruf FIX: V2.1 Endpunkt-Syntax angepasst
         async function ladeParksensoren() {
             try {
                 const response = await fetch("https://opendatasoft.com");

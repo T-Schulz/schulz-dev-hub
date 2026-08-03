@@ -57,26 +57,27 @@
                 const container = document.getElementById("sensorListContainer");
                 container.innerHTML = "";
 
-                if(data.results) {
+                if(data.results && data.results.length > 0) {
                     data.results.forEach(rec => {
                         const name = rec.parking_space_name || "Stellplatz";
-                        const status = rec.status === "occupied" ? "Belegt" : "Frei";
-                        const farbe = rec.status === "occupied" ? "#e74c3c" : "#2ecc71";
+                        const statusText = (rec.status === "occupied" || rec.status === "belegt") ? "Belegt" : "Frei";
+                        const farbe = statusText === "Belegt" ? "#e74c3c" : "#2ecc71";
 
                         const row = document.createElement("div");
                         row.className = "data-row";
-                        row.innerHTML = `<span>🚗 ${name}</span> <strong style="color: ${farbe}">${status}</strong>`;
+                        row.innerHTML = `<span>🚗 ${name}</span> <strong style="color: ${farbe}">${statusText}</strong>`;
                         container.appendChild(row);
                     });
+                } else {
+                    container.innerHTML = "<div class='data-row'>Keine Sensordaten verfügbar.</div>";
                 }
             } catch(e) {
                 console.error(e);
-                document.getElementById("sensorListContainer").innerHTML = "<div class='data-row'>Abruf fehlgeschlagen.</div>";
+                document.getElementById("sensorListContainer").innerHTML = "<div class='data-row'>Abruf über das städtische Portal fehlgeschlagen.</div>";
             }
         }
         ladeVerkehrsSensoren();
 
-        // Theme Toggle
         const btn = document.getElementById("themeToggle");
         btn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
