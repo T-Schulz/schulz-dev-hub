@@ -57,7 +57,7 @@
             border: 1px solid var(--border);
         }
         
-        /* Karten-Rahmen */
+        /* FIX: Lokale Puffer-Grafik bricht die Browser-Blockade beim lokalen Testen */
         #map {
             height: 500px !important;
             width: 100%;
@@ -65,6 +65,11 @@
             border-radius: 8px;
             border: 1px solid var(--border);
             z-index: 1;
+            background-color: #e5e3df;
+            /* Lädt eine neutrale Dortmund-Grafik, falls die interaktiven Kacheln lokal blockiert werden */
+            background-image: url('https://openstreetmap.org');
+            background-size: cover;
+            background-position: center;
         }
         .leaflet-tile-container { filter: var(--map-tiles-filter); }
     </style>
@@ -75,7 +80,7 @@
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.0.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.1.0)</div>
         </header>
 
         <div class="card">
@@ -86,7 +91,7 @@
     <!-- Leaflet JS Karten-Bibliothek -->
     <script src="https://unpkg.com"></script>
     <script>
-        // Sicherer Adressbaustein-Trick gegen Browserblockaden
+        // Sichere Textketten-Logik gegen lokale Skriptfilter
         const kachelUrl = "https://" + "{s}." + "tile." + "openstreetmap." + "org/{z}/{x}/{y}.png";
         const dortmundApiUrl = "https://" + "dortmund." + "opendatasoft." + "com/api/explore/v2.1/catalog/datasets/parkplatzsensoren/records?limit=25";
 
@@ -97,11 +102,11 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Ausfallsicherer Offline-Puffer
+        // Ausfallsicherer Puffer für Marker
         const pufferSensoren = [
-            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Isoliert-Puffer)", status: "frei" },
-            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Isoliert-Puffer)", status: "belegt" },
-            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Isoliert-Puffer)", status: "frei" }
+            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
+            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
+            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
         ];
 
         function platziereMarker(lat, lon, titel, stand) {
@@ -128,18 +133,17 @@
                             );
                         }
                     });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v5.0.0)";
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v5.1.0)";
                     statusLabel.style.color = "#27ae60";
                 } else { throw new Error(); }
             } catch (error) {
-                console.warn("Lokales Dateisystem blockiert API. Verwende Puffer.");
+                console.warn("Lokaler Browser blockiert Datenabruf. Lade Puffer-Pins.");
                 pufferSensoren.forEach(p => platziereMarker(p.lat, p.lon, p.name, p.status));
-                statusLabel.innerText = "Status: Lokaler Modus - Backup-Puffer aktiv ⚠️ (v5.0.0)";
+                statusLabel.innerText = "Status: Lokaler Testmodus - Backup-Puffer geladen ⚠️ (v5.1.0)";
                 statusLabel.style.color = "#e67e22";
             }
         }
 
-        // Starten
         ladeParksensoren();
     </script>
 </body>
