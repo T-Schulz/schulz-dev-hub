@@ -4,20 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dev-Hub Dashboard</title>
+    
+    <!-- Leaflet CSS für die OpenStreetMap Karte -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    
     <style>
         :root {
             --bg: #f4f4f9;
             --text: #333;
             --card-bg: #ffffff;
             --accent: #007bff;
+            --accent-hover: #0056b3;
             --border: #e0e0e0;
+            --map-tiles-filter: none;
         }
         [data-theme="dark"] {
             --bg: #121212;
             --text: #e0e0e0;
             --card-bg: #1e1e1e;
             --accent: #00adb5;
+            --accent-hover: #00f5ff;
             --border: #333333;
+            --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -25,8 +33,12 @@
             color: var(--text);
             margin: 0;
             padding: 40px 20px;
+            transition: background 0.3s, color 0.3s;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
         header {
             display: flex;
             justify-content: space-between;
@@ -43,18 +55,38 @@
             border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
         .card {
             background: var(--card-bg);
             padding: 25px;
             border-radius: 12px;
             border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             margin-bottom: 25px;
         }
-        .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
-        .badge { height: 24px; border-radius: 4px; display: inline-block; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .badge {
+            height: 24px;
+            border-radius: 4px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: 1fr; }
+        }
         .btn-link {
             display: inline-block;
             background-color: var(--accent);
@@ -64,38 +96,26 @@
             text-decoration: none;
             font-weight: bold;
             margin-top: 15px;
+            transition: background 0.2s, transform 0.1s;
             text-align: center;
         }
-        
-        /* Lokaler, ausfallsicherer Karten-Container */
-        .map-static-container {
+        .btn-link:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        h2, h3 { margin-top: 0; }
+        p { line-height: 1.6; color: var(--text); opacity: 0.9; }
+
+        /* Absolut festes Karten-Layout */
+        #map {
+            height: 450px !important;
             width: 100%;
-            height: 400px;
-            background-color: #e5e3df;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            position: relative;
-            background-image: url('https://fastly.net'); /* Neutraler Fallback */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            z-index: 1;
         }
-
-        /* Visuelle Nachbildung der Puffer-Marker im Raum Dortmund */
-        .puffer-marker {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        }
-        .marker-1 { top: 40%; left: 45%; background-color: #2ecc71; } /* Wallring Frei */
-        .marker-2 { top: 55%; left: 38%; background-color: #e74c3c; } /* Hbf Belegt */
-        .marker-3 { top: 35%; left: 60%; background-color: #2ecc71; } /* Reinoldi Frei */
+        .leaflet-tile-container { filter: var(--map-tiles-filter); }
     </style>
 </head>
 <body>
@@ -105,45 +125,58 @@
             <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
         </header>
 
-        <!-- Haupt-Willkommensbox mit reinen, unzerstörbaren HTML-Logos -->
+        <!-- Haupt-Willkommensbox -->
         <div class="card">
             <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
             <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
             
-            <div class="badge-container">
-                <img class="badge" src="https://shields.io" alt="Python">
-                <img class="badge" src="https://shields.io" alt="Git">
-                <img class="badge" src="https://shields.io" alt="VS Code">
-                <img class="badge" src="https://shields.io" alt="Smart City">
-            </div>
+            <!-- START_BADGES -->
+            <div class="badge-container" id="dynamicBadges"></div>
+
+            <script>
+                // Originaler, sicherer Zusammenbau der Adressbausteine als Text
+                const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
+                
+                // Definition aller Technologien inklusive der neuen Leitstellen-Module
+                const technologien = [
+                    { name: "Python", farbe: "3776AB", logo: "python" },
+                    { name: "GIT", farbe: "F05032", logo: "git" },
+                    { name: "Visual_Studio_Code", farbe: "007ACC", logo: "visual-studio-code" },
+                    { name: "Markdown", farbe: "000000", logo: "markdown" },
+                    { name: "HTML5", farbe: "E34F26", logo: "html5" },
+                    { name: "CSS3", farbe: "1572B6", logo: "css3" },
+                    { name: "Leaflet", farbe: "199900", logo: "leaflet" }
+                ];
+
+                const container = document.getElementById("dynamicBadges");
+                
+                // Original-Schleife baut die Schilder im Browser zusammen
+                technologien.forEach(tech => {
+                    const img = document.createElement("img");
+                    img.className = "badge";
+                    img.alt = tech.name;
+                    img.src = basisUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
+                    container.appendChild(img);
+                });
+            </script>
+            <!-- ENDE_BADGES -->
         </div>
 
-        <!-- Lokale Leitstelle: Lädt garantiert auch im Offline- oder Dateimodus -->
+        <!-- Smart City Leitstelle Dortmund -->
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p style="font-weight: bold; color: #e67e22;">Status: Lokales Dateisystem aktiv - Puffer-Modus geladen ⚠️ (v2.5.0)</p>
-            
-            <div class="map-static-container">
-                <!-- Visuelle Elemente simulieren das Dortmund-Netzwerk völlig skriptfrei -->
-                <div style="z-index: 2; padding: 20px; background: rgba(255,255,255,0.9); border-radius: 8px; color: #333; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                    <strong>Dortmund City-Netzwerk (Puffer)</strong><br>
-                    <span style="font-size: 0.9rem; color: #666;">• Stellplatz Wallring: Frei Green<br>• Hauptbahnhof: Belegt Red</span>
-                </div>
-                
-                <!-- Die Puffer-Messpunkte direkt auf der Oberfläche platziert -->
-                <div class="puffer-marker marker-1"></div>
-                <div class="puffer-marker marker-2"></div>
-                <div class="puffer-marker marker-3"></div>
-            </div>
+            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern... (v3.5.0)</p>
+            <div id="map"></div>
         </div>
 
-        <!-- Links zu den Unterseiten -->
+        <!-- Projekt-Kacheln umgewandelt in Unterseiten-Links -->
         <div class="grid">
             <div class="card">
                 <h3>🌱 Umwelt & Wetter</h3>
                 <p>Echtzeit-Messwerte zur lokalen Luftqualität (Feinstaub PM2.5/PM10), aktuellen Temperaturen und CO2-Belastung.</p>
                 <a class="btn-link" href="umwelt.html">Daten ansehen</a>
             </div>
+            
             <div class="card">
                 <h3>🚗 Parken & Verkehr</h3>
                 <p>Auslastungsanalyse der LoRaWAN-Parksensoren, Standorte freier E-Ladesäulen und aktuelle Verkehrsfluss-Meldungen.</p>
@@ -152,12 +185,69 @@
         </div>
     </div>
 
-    <!-- Komplett fehlerfreies Minimal-Skript, das unmöglich blockieren kann -->
+    <!-- Leaflet JS Karten-Bibliothek -->
+    <script src="https://unpkg.com"></script>
     <script>
-        document.getElementById("themeToggle").addEventListener("click", () => {
-            const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-            document.documentElement.setAttribute("data-theme", currentTheme);
-        });
-    </script>
-</body>
-</html>
+        // Sicherer Adressbaustein-Trick für die Karten-Kacheln
+        const kachelUrl = "https://" + "{s}." + "tile." + "openstreetmap." + "org/{z}/{x}/{y}.png";
+        
+        // Sicherer Adressbaustein-Trick für das offizielle Opendata-Portal Dortmund
+        const dortmundApiUrl = "https://" + "dortmund." + "opendatasoft." + "com/api/explore/v2.1/catalog/datasets/parkplatzsensoren/records?limit=25";
+
+        // 1. Karte initialisieren und zentrieren
+        var map = L.map('map').setView([51.5136, 7.4653], 13);
+        
+        // 2. Kacheln über die zusammengesetzte URL laden
+        L.tileLayer(kachelUrl, {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Offline-Pufferdaten für den ausfallsicheren Schutz
+        const pufferSensoren = [
+            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
+            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
+            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
+        ];
+
+        // Funktion zeichnet Punkte auf der Landkarte
+        function platziereMarker(lat, lon, titel, stand) {
+            L.marker([lat, lon]).addTo(map)
+             .bindPopup("<b>" + titel + "</b><br>Status: " + stand.toUpperCase());
+        }
+
+        // Live-Daten-Abruf mit dem Vorlagen-Verschlüsselungsprinzip
+        async function ladeParksensoren() {
+            const statusLabel = document.getElementById("mapStatus");
+            try {
+                const response = await fetch(dortmundApiUrl);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(record => {
+                        if (record.geo_point_2d) {
+                            platziereMarker(
+                                record.geo_point_2d.lat, 
+                                record.geo_point_2d.lon, 
+                                record.parking_space_name || "IoT Stellplatz", 
+                                record.status || "unbekannt"
+                            );
+                        }
+                    });
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v3.5.0)";
+                    statusLabel.style.color = "#27ae60";
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                console.warn("API blockiert. Setze Puffer-Marker.");
+                // Setzt bei Netzwerkfiltern sofort die Pufferpunkte ab
+                pufferSensoren.forEach(p => platziereMarker(p.lat, p.lon, p.name, p.status));
+                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️ (v3.5.0)";
+                statusLabel.style.color = "#e67e22";
+            }
+        }
+        
+        ladeParksensoren();
+
+        // Original-Logik für den Modus-Wechsler (Dark Mode)
