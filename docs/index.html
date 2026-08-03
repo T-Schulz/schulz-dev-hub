@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dev-Hub Dashboard</title>
-    
-    <!-- Leaflet CSS für die OpenStreetMap Karte -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    
     <style>
         :root {
             --bg: #f4f4f9;
@@ -15,7 +11,6 @@
             --card-bg: #ffffff;
             --accent: #007bff;
             --border: #e0e0e0;
-            --map-tiles-filter: none;
         }
         [data-theme="dark"] {
             --bg: #121212;
@@ -23,7 +18,6 @@
             --card-bg: #1e1e1e;
             --accent: #00adb5;
             --border: #333333;
-            --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -31,6 +25,7 @@
             color: var(--text);
             margin: 0;
             padding: 40px 20px;
+            transition: background 0.3s, color 0.3s;
         }
         .container { max-width: 800px; margin: 0 auto; }
         header {
@@ -57,7 +52,7 @@
             border: 1px solid var(--border);
             margin-bottom: 25px;
         }
-        .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; min-height: 24px; }
+        .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
         .badge { height: 24px; border-radius: 4px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
@@ -72,17 +67,21 @@
             margin-top: 15px;
             text-align: center;
         }
-
-        /* Begrenzt das Karten-Element strikt auf seinen Rahmen */
-        #map {
-            height: 450px;
+        
+        /* Iframe-Rahmen für die Karte */
+        .map-container {
             width: 100%;
-            margin-top: 15px;
+            height: 450px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            z-index: 1;
+            margin-top: 15px;
+            overflow: hidden;
         }
-        .leaflet-tile-container { filter: var(--map-tiles-filter); }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -92,18 +91,27 @@
             <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
         </header>
 
-        <!-- Haupt-Willkommensbox -->
+        <!-- Haupt-Willkommensbox mit reinen HTML-Logos (Kein JavaScript mehr nötig) -->
         <div class="card">
             <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
             <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
-            <div class="badge-container" id="dynamicBadges"></div>
+            
+            <div class="badge-container">
+                <img class="badge" src="https://shields.io" alt="Python">
+                <img class="badge" src="https://shields.io" alt="Git">
+                <img class="badge" src="https://shields.io" alt="VS Code">
+                <img class="badge" src="https://shields.io" alt="OSM">
+            </div>
         </div>
 
-        <!-- Smart City Leitstelle -->
+        <!-- Smart City Leitstelle via nativem OpenStreetMap-Iframe -->
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern... (v1.5.0)</p>
-            <div id="map"></div>
+            <p style="font-weight: bold; color: #27ae60;">Status: Karte via OpenStreetMap-Iframe aktiv ✔ (v2.0.0)</p>
+            <div class="map-container">
+                <!-- Bindet Dortmund direkt über das offizielle OSM-System ein -->
+                <iframe src="https://openstreetmap.org"></iframe>
+            </div>
         </div>
 
         <!-- Links zu den Unterseiten -->
@@ -121,81 +129,11 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com"></script>
+    <!-- Minimiertes JavaScript nur noch für den Dark Mode Button -->
     <script>
-        // 1. Logos stabil generieren
-        const technologien = [
-            { name: "Python", farbe: "3776AB", logo: "python" },
-            { name: "Git", farbe: "F05032", logo: "git" },
-            { name: "VS_Code", farbe: "007ACC", logo: "visual-studio-code" },
-            { name: "Leaflet", farbe: "199900", logo: "leaflet" }
-        ];
-        
-        const badgeContainer = document.getElementById("dynamicBadges");
-        technologien.forEach(tech => {
-            const img = document.createElement("img");
-            img.className = "badge";
-            img.alt = tech.name;
-            img.src = "https://shields.io" + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
-            badgeContainer.appendChild(img);
-        });
-
-        // 2. Karte initialisieren und fest auf Dortmund zentrieren
-        var map = L.map('map').setView([51.5136, 7.4653], 13);
-        
-        // 3. OpenStreetMap Kacheln laden
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Puffer-Daten bei blockierter API
-        const pufferSensoren = [
-            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
-            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
-            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
-        ];
-
-        // Live-Daten-Abruf aus dem Dortmunder Opendata Portal
-        async function ladeParksensoren() {
-            const statusLabel = document.getElementById("mapStatus");
-            try {
-                // Zugriff auf das verifizierte Open Data Portal Dortmund
-                const response = await fetch("https://opendatasoft.com");
-                
-                if (!response.ok) throw new Error("Netzwerkfehler");
-                const data = await response.json();
-                
-                if (data.results && data.results.length > 0) {
-                    data.results.forEach(record => {
-                        if (record.geo_point_2d) {
-                            L.marker([record.geo_point_2d.lat, record.geo_point_2d.lon]).addTo(map)
-                             .bindPopup("<b>" + (record.parking_space_name || "IoT Stellplatz") + "</b><br>Status: " + (record.status || "unbekannt").toUpperCase());
-                        }
-                    });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v1.5.0)";
-                    statusLabel.style.color = "#27ae60";
-                } else {
-                    throw new Error("API leer");
-                }
-            } catch (error) {
-                console.warn("API nicht erreichbar. Zeichne Puffer-Marker.");
-                pufferSensoren.forEach(p => {
-                    L.marker([p.lat, p.lon]).addTo(map)
-                     .bindPopup("<b>" + p.name + "</b><br>Status: " + p.status.toUpperCase());
-                });
-                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️ (v1.5.0)";
-                statusLabel.style.color = "#e67e22";
-            }
-        }
-        
-        ladeParksensoren();
-
-        // Theme-Wechsler
         document.getElementById("themeToggle").addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", currentTheme);
-            setTimeout(() => { map.invalidateSize(); }, 200); 
         });
     </script>
 </body>
