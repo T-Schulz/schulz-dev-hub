@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart City Leitstelle - Dortmund</title>
     
-    <!-- Leaflet CSS für die OpenStreetMap Karte -->
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <!-- ERZWUNGEN: Absolut sicheres HTTPS Leaflet CSS -->
+    <link rel="stylesheet" href="https://cloudflare.com" />
     
     <style>
         :root {
@@ -53,7 +53,7 @@
             border: none;
         }
         .btn-test {
-            background-color: #e67e22; /* Orange für den Test-Button */
+            background-color: #e67e22;
             margin-left: 10px;
         }
         .card {
@@ -63,7 +63,7 @@
             border: 1px solid var(--border);
         }
         
-        /* Fest verankertes Karten-Layout */
+        /* Festes Karten-Layout */
         #map {
             height: 500px !important;
             width: 100% !important;
@@ -71,7 +71,7 @@
             border-radius: 8px;
             border: 1px solid var(--border);
             z-index: 1;
-            background: #e5e3df !important; /* Verhindert das Standard-Grau */
+            background-color: #e5e3df !important;
         }
         .leaflet-tile-container { filter: var(--map-tiles-filter); }
     </style>
@@ -79,13 +79,11 @@
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
-        
-        <!-- NEUER BUTTON FÜR DIE REFERENZKARTE -->
         <button class="btn-link btn-test" id="btnAlternative">Alternative Karte laden 🔄</button>
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.3.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere Karte... (v5.4.0)</div>
         </header>
 
         <div class="card">
@@ -93,16 +91,13 @@
         </div>
     </div>
 
-    <!-- Leaflet JS Karten-Bibliothek -->
-    <script src="https://unpkg.com"></script>
+    <!-- ERZWUNGEN: Absolut sicheres HTTPS Leaflet JS Skript -->
+    <script src="https://cloudflare.com"></script>
     <script>
-        // URLs stückeln, um Firewalls zu umgehen
-        const osmKachelUrl = "https://" + "{s}." + "tile." + "openstreetmap." + "org/{z}/{x}/{y}.png";
-        
-        // Die absolut sichere, weltweite CARTO-Referenzkarte (wird fast nie blockiert)
-        const alternativeKachelUrl = "https://" + "a." + "basemaps." + "cartocdn." + "com/light_all/{z}/{x}/{y}.png";
-        
-        const dortmundApiUrl = "https://" + "dortmund." + "opendatasoft." + "com/api/explore/v2.1/catalog/datasets/parkplatzsensoren/records?limit=25";
+        // KORREKTUR: Knallharte, erzwungene HTTPS-Zuweisung, um "Mixed Content" auf GitHub Pages zu verhindern
+        const osmKachelUrl = "https://openstreetmap.org{z}/{x}/{y}.png";
+        const alternativeKachelUrl = "https://cartocdn.com{z}/{x}/{y}.png";
+        const dortmundApiUrl = "https://opendatasoft.com";
 
         var map;
         var kachelSchicht;
@@ -119,38 +114,34 @@
         }
 
         function initialisiereLeitstelle() {
-            // 1. Karte anlegen
+            // Karte anlegen
             map = L.map('map').setView([51.5136, 7.4653], 13);
             
-            // 2. Standard OSM Kacheln laden
+            // OSM laden
             kachelSchicht = L.tileLayer(osmKachelUrl, {
-                attribution: '© OpenStreetMap contributors'
+                attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            // 3. Sofortige Layout-Erneuerung erzwingen
+            // Größe neu berechnen
             setTimeout(function() {
                 map.invalidateSize();
                 ladeParksensoren();
             }, 300);
         }
 
-        // Event-Listener für den Test-Button
+        // Event-Listener für den Alternativ-Button
         document.getElementById("btnAlternative").addEventListener("click", function() {
             const statusLabel = document.getElementById("mapStatus");
             try {
-                // Entferne die alte, graue Schicht
                 map.removeLayer(kachelSchicht);
-                
-                // Lade die fehlerfreie CARTO-Referenzkarte
                 kachelSchicht = L.tileLayer(alternativeKachelUrl, {
                     attribution: '© CARTO'
                 }).addTo(map);
-                
                 map.invalidateSize();
-                statusLabel.innerText = "Status: Referenzkarte aktiv! Wenn das Feld jetzt lädt, blockiert dein Netzwerk OSM. (v5.3.0)";
+                statusLabel.innerText = "Status: Sichere HTTPS-Alternativkarte aktiv (v5.4.0)";
                 statusLabel.style.color = "#007bff";
             } catch(e) {
-                console.error("Fehler beim Schichtwechsel:", e);
+                console.error(e);
             }
         });
 
@@ -172,12 +163,12 @@
                             );
                         }
                     });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v5.3.0)";
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich über HTTPS geladen ✔ (v5.4.0)";
                     statusLabel.style.color = "#27ae60";
                 } else { throw new Error(); }
             } catch (error) {
                 pufferSensoren.forEach(p => platziereMarker(p.lat, p.lon, p.name, p.status));
-                statusLabel.innerText = "Status: Backup-Puffer aktiv ⚠️ (v5.3.0)";
+                statusLabel.innerText = "Status: Backup-Puffer über HTTPS aktiv ⚠️ (v5.4.0)";
                 statusLabel.style.color = "#e67e22";
             }
         }
