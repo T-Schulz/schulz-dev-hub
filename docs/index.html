@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dev-Hub Dashboard</title>
     
-    <!-- Leaflet CSS für die OpenStreetMap Karte -->
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <!-- Absolut notwendiges Leaflet CSS für die korrekte Kachel-Ausrichtung -->
+    <link rel="stylesheet" href="https://unpkg.com" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
     <style>
         :root {
@@ -56,6 +56,7 @@
             border-radius: 12px;
             border: 1px solid var(--border);
             margin-bottom: 25px;
+            overflow: hidden; /* Verhindert, dass fehlerhafte Elemente ausbrechen */
         }
         .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; min-height: 24px; }
         .badge { height: 24px; border-radius: 4px; }
@@ -73,15 +74,15 @@
             text-align: center;
         }
 
-        /* Feste, erzwungene CSS-Höhe für das Rendering */
+        /* ERZWUNGENES KARTEN-STYLING: Hält die Kacheln im Rahmen fest */
         #map {
             height: 450px !important;
-            width: 100%;
+            width: 100% !important;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            display: block !important;
             z-index: 1;
+            position: relative !important;
         }
         .leaflet-tile-container { filter: var(--map-tiles-filter); }
     </style>
@@ -103,7 +104,7 @@
         <!-- Smart City Leitstelle -->
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern...</p>
+            <p id="mapStatus" style="font-weight: bold; color: #e67e22;">Status: Verbinde mit städtischen IoT-Servern... (v1.4.0)</p>
             <div id="map"></div>
         </div>
 
@@ -122,10 +123,10 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet JS Skript-Bibliothek -->
+    <script src="https://unpkg.com" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        // Logos generieren
+        // 1. Logos SOFORT laden, damit sie nicht blockiert werden
         const technologien = [
             { name: "Python", farbe: "3776AB", logo: "python" },
             { name: "Git", farbe: "F05032", logo: "git" },
@@ -142,34 +143,36 @@
             badgeContainer.appendChild(img);
         });
 
-        // 1. Karte deklarieren
+        // 2. Kartenvariablen deklarieren
         var map;
-
-        // Fallback-Puffer für IoT Marker
         const pufferSensoren = [
             { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
             { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
             { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
         ];
 
-        // Funktion zur Initialisierung
-        function initMap() {
-            // Karte anlegen
-            map = L.map('map').setView([51.5136, 7.4653], 13);
+        // 3. Kartenaufbau erst starten, wenn die HTML-Struktur bombenfest steht
+        document.addEventListener("DOMContentLoaded", function() {
             
-            // Kacheln laden
+            // Karte erzeugen, Zoom-Stufen begrenzen (minZoom 11 verhindert das Rauszoomen nach ganz Europa)
+            map = L.map('map', {
+                minZoom: 11,
+                maxZoom: 18
+            }).setView([51.5136, 7.4653], 13);
+            
+            // Kartenkacheln laden
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
 
-            // FIX: Leaflet zwingen, die echte Containergröße sofort zu berechnen
+            // Leaflet Grafik-Engine aktualisieren
             setTimeout(function() {
                 map.invalidateSize();
                 ladeParksensoren();
-            }, 200);
-        }
+            }, 100);
+        });
 
-        // Live-Daten-Abruf
+        // Live-Daten-Abruf aus Dortmund
         async function ladeParksensoren() {
             const statusLabel = document.getElementById("mapStatus");
             try {
@@ -185,32 +188,29 @@
                              .bindPopup("<b>" + (record.parking_space_name || "IoT Stellplatz") + "</b><br>Status: " + (record.status || "unbekannt").toUpperCase());
                         }
                     });
-                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔";
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔ (v1.4.0)";
                     statusLabel.style.color = "#27ae60";
                 } else {
                     throw new Error("API leer");
                 }
             } catch (error) {
-                console.warn("API Offline oder blockiert. Puffer-Marker werden auf Karte gesetzt.", error);
+                console.warn("API nicht erreichbar. Zeichne Puffer-Marker.");
                 
-                // FIX: Pufferdaten werden nun direkt als Marker auf die gezeichnete Karte gesetzt
+                // Fallback: Zeichne die Puffer-Marker direkt in das korrigierte Kartensystem
                 pufferSensoren.forEach(p => {
                     L.marker([p.lat, p.lon]).addTo(map)
                      .bindPopup("<b>" + p.name + "</b><br>Status: " + p.status.toUpperCase());
                 });
-                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️";
+                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️ (v1.4.0)";
                 statusLabel.style.color = "#e67e22";
             }
         }
-        
-        // Erst ausführen, wenn das Fenster geladen ist, um Darstellungs-Fehler zu vermeiden
-        window.onload = initMap;
 
         // Theme-Wechsler
         document.getElementById("themeToggle").addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", currentTheme);
-            setTimeout(() => { map.invalidateSize(); }, 300); 
+            setTimeout(() => { map.invalidateSize(); }, 200); 
         });
     </script>
 </body>
