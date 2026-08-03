@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart City Leitstelle - Dortmund</title>
     
-    <!-- CSS für die Struktur der Karte direkt geladen -->
+    <!-- CSS für die Struktur der Karte direkt vom OSM-Server -->
     <link rel="stylesheet" href="https://openstreetmap.org" />
     
     <style>
@@ -92,7 +92,7 @@
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere... (v6.2.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Initialisiere... (v6.3.0)</div>
         </header>
 
         <div class="card">
@@ -101,21 +101,18 @@
 
         <h3>💻 Live-Server-Konsole</h3>
         <div class="console-box" id="debugConsole">
-            [v6.2.0 Autarkes System aktiv]<br>
+            [v6.3.0 Live-System aktiv]<br>
         </div>
     </div>
 
-    <!-- DER KOMPLETTE LEAFLET-KERN direkt in deine Datei eingebettet (Verhindert jegliche Blockade) -->
-    <script>
-        /* Leaflet 1.9.4 Core Loader Stub */
-        !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).L={})}(this,(function(t){"use strict";function e(t){var e,i,n,o;for(i=1,n=arguments.length;i<n;i++)for(e in o=arguments[i])t[e]=o[e];return t}var i=Object.create||function(){function t(){}return function(e){return t.prototype=e,new t}}();function n(t){return setTimeout(t,0)}var o=Array.isArray||function(t){return"[object Array]"===Object.prototype.toString.call(t)};function s(t){return"string"==typeof t}function r(t){return"function"==typeof t}function a(t){return"number"==typeof t}function h(t){return"object"==typeof t&&null!==t}function u(t){return t.trim?t.trim():t.replace(/^\s+|\s+$/g,"")}function l(t){return u(t).split(/\s+/)}function c(t,e){for(var i in e)t[i]=e[i];return t}function _(t){return t.x!==undefined&&t.y!==undefined}function d(t){return t.lat!==undefined&&t.lng!==undefined}function p(t){return t instanceof m?t:o(t)?new m(t[0],t[1]):h(t)&&_(t)?new m(t.x,t.y):new m(t)}function m(t,e){this.x=t,this.y=e}function f(t){return t instanceof g?t:o(t)?new g(t[0],t[1]):h(t)&&d(t)?new g(t.lat,t.lng):new g(t)}function g(t,e){this.lat=t,this.lng=e}/* Mini-Stub-Initialisierung */
-        var L=t;L.version="1.9.4",L.map=function(t,i){var n={setView:function(t,e){printLog("Karte erfolgreich auf Koordinaten zentriert! 📍", "#2ecc71");return n},addTo:function(t){return n},invalidateSize:function(){printLog("Karten-Größe erfolgreich berechnet. ✔");return n}};printLog("L.map() Steuer-Zentrale sicher geladen! ✔", "#2ecc71");return n};L.tileLayer=function(t,e){return{addTo:function(t){printLog("Bildkacheln fehlerfrei eingebunden. ✔");return{}}}};;L.marker=function(t){return{addTo:function(e){printLog("Puffer-Sensor erfolgreich auf Karte eingezeichnet! ✔");return{bindPopup:function(t){return{}}}}}};
-    }));
-    </script>
+    <!-- Vollwertiges, stabiles Leaflet JS direkt vom offiziellen OpenStreetMap-Spiegel geladen -->
+    <script src="https://openstreetmap.org"></script>
     
-    <!-- HIER FOLGT DEINE PROJEKT-LOGIK -->
     <script>
+        const osmKachelUrl = "https://openstreetmap.org{z}/{x}/{y}.png";
         const dortmundApiUrl = "https://opendatasoft.com";
+
+        var map;
 
         function printLog(text, farbe = "#00ff00") {
             const konsole = document.getElementById("debugConsole");
@@ -127,18 +124,28 @@
         }
 
         function initialisiereLeitstelle() {
-            printLog("Starte geschützten Leitstellen-Modus v6.2.0...", "#3498db");
+            printLog("Starte echten Leitstellen-Modus v6.3.0...", "#3498db");
             
+            if (typeof L === 'undefined') {
+                printLog("Fehler: Leaflet-Engine konnte nicht über OSM geladen werden.", "#ff3333");
+                return;
+            }
+
             try {
-                // Initialisiert die Karte absolut absturzsicher
+                // Initialisiert die echte interaktive Karte
                 map = L.map('map').setView([51.5136, 7.4653], 13);
+                printLog("Echtes L.map() Objekt erfolgreich initialisiert! ✔", "#2ecc71");
                 
-                L.tileLayer("https://openstreetmap.org{z}/{x}/{y}.png", {
+                L.tileLayer(osmKachelUrl, {
                     attribution: '© OpenStreetMap'
                 }).addTo(map);
+                printLog("Interaktive Bildkacheln erfolgreich eingebunden. ✔");
 
-                map.invalidateSize();
-                ladeParksensoren();
+                setTimeout(function() {
+                    map.invalidateSize();
+                    printLog("Karten-Größe erfolgreich berechnet. ✔");
+                    ladeParksensoren();
+                }, 300);
 
             } catch (err) {
                 printLog("Fehler beim Kartenaufbau: " + err.message, "#ff3333");
@@ -149,26 +156,42 @@
             const statusLabel = document.getElementById("mapStatus");
             printLog("Sende HTTPS-Fetch an städtische Server...", "#3498db");
             
+            // Ausfallsichere Puffer-Marker, falls das Opendata-Portal Dortmund blockiert
+            const puffer = [
+                { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Puffer)" },
+                { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Puffer)" },
+                { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Puffer)" }
+            ];
+
             try {
                 const response = await fetch(dortmundApiUrl);
                 const data = await response.json();
                 
                 if (data.results && data.results.length > 0) {
-                    printLog(`Erfolgreich ${data.results.length} Live-Sensoren aus Dortmund empfangen!`, "#2ecc71");
+                    printLog(`Erfolgreich ${data.results.length} Live-Sensoren aus Dortmund empfangen! Zeichne Punkte...`, "#2ecc71");
                     
-                    // Zeichnet die Pins direkt über die eingebettete Engine
-                    const puffer = [
-                        { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring" },
-                        { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof" }
-                    ];
-                    puffer.forEach(p => L.marker([p.lat, p.lon]).addTo(map).bindPopup(p.name));
+                    data.results.forEach(record => {
+                        if (record.geo_point_2d) {
+                            const statusText = (record.status === "occupied" || record.status === "belegt") ? "BELEGT" : "FREI";
+                            L.marker([record.geo_point_2d.lat, record.geo_point_2d.lon]).addTo(map)
+                             .bindPopup(`<b>${record.parking_space_name || 'IoT Stellplatz'}</b><br>Status: ${statusText}`);
+                        }
+                    });
                     
-                    statusLabel.innerText = "Status: Live-Karte online ✔ (v6.2.0)";
+                    statusLabel.innerText = "Status: Live-Karte online ✔ (v6.3.0)";
                     statusLabel.style.color = "#27ae60";
                     printLog("Smart City Leitstelle erfolgreich online! ✔", "#2ecc71");
+                } else {
+                    throw new Error("API-Ergebnis leer");
                 }
             } catch (error) {
-                printLog("API blockiert, verwende internen Schutz...", "#e67e22");
+                printLog("API blockiert oder offline. Zeichne Puffer-Marker...", "#e67e22");
+                puffer.forEach(p => {
+                    L.marker([p.lat, p.lon]).addTo(map)
+                     .bindPopup(`<b>${p.name}</b><br>Status: BACKUP`);
+                });
+                statusLabel.innerText = "Status: Backup-Puffer aktiv ⚠️ (v6.3.0)";
+                statusLabel.style.color = "#e67e22";
             }
         }
 
