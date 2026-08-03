@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umwelt & Wetter - Dev-Hub</title>
+    <style>
+        :root {
+            --bg: #f4f4f9;
+            --text: #333;
+            --card-bg: #ffffff;
+            --accent: #27ae60; /* Grüner Akzent für Umwelt */
+            --accent-hover: #219150;
+            --border: #e0e0e0;
+        }
+        [data-theme="dark"] {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --accent: #2ecc71;
+            --accent-hover: #40d47e;
+            --border: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .btn-toggle {
+            background-color: transparent;
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-toggle:hover { border-color: var(--accent); color: var(--accent); }
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        .btn-link {
+            display: inline-block;
+            background-color: #333;
+            color: white !important;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: background 0.2s;
+        }
+        [data-theme="dark"] .btn-link { background-color: #444; }
+        .btn-link:hover { opacity: 0.8; }
+        h2, h3 { margin-top: 0; }
+        p { line-height: 1.6; color: var(--text); opacity: 0.9; }
+        
+        /* Platzhalter für das Live-Diagramm */
+        .chart-placeholder {
+            background: rgba(0,0,0,0.02);
+            border: 2px dashed var(--border);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: var(--text);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="btn-link" href="index.html">← Zurück zur Zentrale</a>
+        
+        <header>
+            <h1>🌱 Umwelt & Wetter</h1>
+            <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
+        </header>
+
+        <div class="card">
+            <h2>Luftqualität & Klimasensoren</h2>
+            <p>Diese Unterseite verarbeitet zukünftig die Feinstaubdaten (PM2.5 und PM10) aus Dortmund-Mitte über die Schnittstellen von <code>sensor.community</code>.</p>
+        </div>
+
+        <div class="card">
+            <h3>📈 Feinstaub-Verlauf (24h)</h3>
+            <div class="chart-placeholder">
+                [Diagramm-Modul bereit für API-Daten]
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btn = document.getElementById("themeToggle");
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute("data-theme", "dark");
+        }
+        btn.addEventListener("click", () => {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-theme", newTheme);
+        });
+    </script>
+</body>
+</html>

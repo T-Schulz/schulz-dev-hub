@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dev-Hub Dashboard</title>
+    
+    <!-- Leaflet CSS für die OpenStreetMap Karte -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    
     <style>
         :root {
             --bg: #f4f4f9;
@@ -12,6 +16,7 @@
             --accent: #007bff;
             --accent-hover: #0056b3;
             --border: #e0e0e0;
+            --map-tiles-filter: none; /* Normale helle Karte */
         }
         [data-theme="dark"] {
             --bg: #121212;
@@ -20,6 +25,7 @@
             --accent: #00adb5;
             --accent-hover: #00f5ff;
             --border: #333333;
+            --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); /* Dunkle Karte */
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -99,6 +105,20 @@
         }
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
+
+        /* Integriertes Styling für das Karten-Element */
+        #map {
+            height: 350px;
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            z-index: 1;
+        }
+        /* Filter-Logik für den Dunkelmodus der OSM-Karte */
+        .leaflet-tile-container {
+            filter: var(--map-tiles-filter);
+        }
     </style>
 </head>
 <body>
@@ -114,59 +134,75 @@
             <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
             
             <!-- START_BADGES -->
-<div class="badge-container" id="dynamicBadges">
-    <!-- Die Schilder werden hier gleich automatisch reingeladen -->
-</div>
+            <div class="badge-container" id="dynamicBadges">
+                <!-- Die Schilder werden hier gleich automatisch reingeladen -->
+            </div>
 
-<script>
-    // Wir bauen uns die Adressbausteine sicher als Text zusammen
-    const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
-    
-    // Hier definieren wir Name, Farbe und Logo für jedes Schild
-    const technologien = [
-        { name: "Python", farbe: "3776AB", logo: "python" },
-        { name: "GIT", farbe: "F05032", logo: "git" },
-        { name: "Visual_Studio_Code", farbe: "007ACC", logo: "visual-studio-code" },
-        { name: "Markdown", farbe: "000000", logo: "markdown" },
-        { name: "HTML5", farbe: "E34F26", logo: "html5" },
-        { name: "CSS3", farbe: "1572B6", logo: "css3" }
-    ];
+            <script>
+                const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
+                const technologien = [
+                    { name: "Python", farbe: "3776AB", logo: "python" },
+                    { name: "GIT", farbe: "F05032", logo: "git" },
+                    { name: "Visual_Studio_Code", farbe: "007ACC", logo: "visual-studio-code" },
+                    { name: "Markdown", farbe: "000000", logo: "markdown" },
+                    { name: "HTML5", farbe: "E34F26", logo: "html5" },
+                    { name: "CSS3", farbe: "1572B6", logo: "css3" },
+                    { name: "Leaflet", farbe: "199900", logo: "leaflet" } // Neues Badge für die Karte
+                ];
 
-    const container = document.getElementById("dynamicBadges");
-    
-    // Schleife baut die Bilder im Browser zusammen, wenn die Seite lädt
-    technologien.forEach(tech => {
-        const img = document.createElement("img");
-        img.className = "badge";
-        img.alt = tech.name;
-        // Erzeugt den finalen Link: basisUrl + Name-Farbe?style=flat&logo=logoName&logoColor=white
-        img.src = basisUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
-        container.appendChild(img);
-    });
-</script>
-<!-- ENDE_BADGES -->
+                const container = document.getElementById("dynamicBadges");
+                technologien.forEach(tech => {
+                    const img = document.createElement("img");
+                    img.className = "badge";
+                    img.alt = tech.name;
+                    img.src = basisUrl + tech.name + "-" + tech.farbe + "?style=flat&logo=" + tech.logo + "&logoColor=white";
+                    container.appendChild(img);
+                });
+            </script>
+            <!-- ENDE_BADGES -->
         </div>
 
-        <!-- Projekt-Kacheln -->
+        <!-- Integrierter Punkt 1: Smart City Karte Dortmund -->
+        <div class="card">
+            <h3>🗺️ Live Smart City Leitstelle</h3>
+            <p>Interaktive OpenStreetMap-Visualisierung des Dortmunder Stadtgebiets zur Lokalisierung von IoT-Sensoren und Verkehrsdaten.</p>
+            <div id="map"></div>
+        </div>
+
+        <!-- Projekt-Kacheln (Umgewandelt in deine Unterseiten) -->
         <div class="grid">
             <div class="card">
-                <h3>📁 Skripte & Automation</h3>
-                <p>Enthält mein Systemdiagnose-Tool <code>sys_check.py</code> und tägliche Helfer.</p>
-                <!-- WICHTIG: Ersetze DEIN-USERNAME im Link -->
-                <a class="btn-link" href="https://t-schulz.github.io/schulz-dev-hub/" target="_blank">Skripte ansehen</a>
+                <h3>🌱 Umwelt & Wetter</h3>
+                <p>Echtzeit-Messwerte zur lokalen Luftqualität (Feinstaub PM2.5/PM10), aktuellen Temperaturen und CO2-Belastung.</p>
+                <a class="btn-link" href="umwelt.html">Daten ansehen</a>
             </div>
             
             <div class="card">
-                <h3>🧪 Sandbox & Labor</h3>
-                <p>Isolierter Spielplatz für das Testen neuer Web-Frameworks und Programmiersprachen.</p>
-                <a class="btn-link" href="https://t-schulz.github.io/schulz-dev-hub/" target="_blank">Projekte ansehen</a>
+                <h3>🚗 Parken & Verkehr</h3>
+                <p>Auslastungsanalyse der LoRaWAN-Parksensoren, Standorte freier E-Ladesäulen und aktuelle Verkehrsfluss-Meldungen.</p>
+                <a class="btn-link" href="verkehr.html">Projekte ansehen</a>
             </div>
         </div>
     </div>
 
+    <!-- Leaflet JS für die Kartenfunktionalität -->
+    <script src="https://unpkg.com"></script>
     <script>
+        // Karte initialisieren und auf Dortmund zentrieren
+        var map = L.map('map').setView([51.5136, 7.4653], 13);
+
+        // OSM Kacheln laden
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Beispiel-Marker setzen
+        L.marker([51.514, 7.465]).addTo(map)
+            .bindPopup('<b>Smart City Zentrale Dortmund</b><br>Sensor-Netzwerk online.');
+
+        // Theme-Wechsler Logik (Bestehendes System erweitert um Karten-Refresh)
         const btn = document.getElementById("themeToggle");
-        // Prüfe, ob der User das System auf Dark-Mode stehen hat
+        
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
@@ -175,6 +211,9 @@
             const currentTheme = document.documentElement.getAttribute("data-theme");
             const newTheme = currentTheme === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", newTheme);
+            
+            // Verhindert Darstellungsfehler der Karte beim Umschalten des Modus
+            setTimeout(() => { map.invalidateSize(); }, 300); 
         });
     </script>
 </body>
