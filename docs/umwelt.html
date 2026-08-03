@@ -26,37 +26,45 @@
         </header>
 
         <div class="card">
-            <h3>📈 Aktuelle städtische Klimasensoren (Dortmund)</h3>
-            <div id="klimaDatenContainer">
-                <div class="data-row"><span>Lade städtische Klimadaten...</span></div>
-            </div>
+            <h3 id="klimaStatus">📈 Aktuelle städtische Klimasensoren (Dortmund)</h3>
+            <div id="klimaDatenContainer"></div>
         </div>
     </div>
 
     <script>
+        const pufferKlima = [
+            { station: "Dortmund-Mitte (Puffer)", temp: 18.5, hum: 62 },
+            { station: "Dortmund-Hörde (Puffer)", temp: 17.9, hum: 65 }
+        ];
+
+        function renderRows(daten) {
+            const container = document.getElementById("klimaDatenContainer");
+            container.innerHTML = "";
+            daten.forEach(d => {
+                const row = document.createElement("div");
+                row.className = "data-row";
+                row.innerHTML = `<span>📍 ${d.station}</span> <strong>${d.temp}°C / ${d.hum}% rF</strong>`;
+                container.appendChild(row);
+            });
+        }
+
         async function ladeKlimaDaten() {
             try {
                 const response = await fetch("https://opendatasoft.com");
+                if(!response.ok) throw new Error();
                 const data = await response.json();
-                const container = document.getElementById("klimaDatenContainer");
-                container.innerHTML = "";
 
                 if(data.results && data.results.length > 0) {
-                    data.results.forEach(rec => {
-                        const station = rec.station_name || "Klimastation";
-                        const temp = rec.air_temperature !== undefined ? rec.air_temperature : "--";
-                        const hum = rec.relative_humidity !== undefined ? rec.relative_humidity : "--";
-                        
-                        const row = document.createElement("div");
-                        row.className = "data-row";
-                        row.innerHTML = `<span>📍 ${station}</span> <strong>${temp}°C / ${hum}% rF</strong>`;
-                        container.appendChild(row);
-                    });
-                } else {
-                    container.innerHTML = "<div class='data-row'>Keine Daten im städtischen Daten-Feed gefunden.</div>";
-                }
+                    const formatierteDaten = data.results.map(r => ({
+                        station: r.station_name || "Klimastation",
+                        temp: r.air_temperature ?? "--",
+                        hum: r.relative_humidity ?? "--"
+                    }));
+                    renderRows(formatierteDaten);
+                } else { throw new Error(); }
             } catch(e) {
-                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Abruf-Fehler von der städtischen API.</div>";
+                renderRows(pufferKlima);
+                document.getElementById("klimaStatus").innerText += " [Puffer-Modus]";
             }
         }
         ladeKlimaDaten();

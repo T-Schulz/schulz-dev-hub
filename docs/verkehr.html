@@ -25,37 +25,48 @@
         </header>
 
         <div class="card">
-            <h3>📍 Live IoT Park-Sensoren (Dortmund)</h3>
-            <div id="sensorListContainer">
-                <div class="data-row"><span>Verbindung zum städtischen Daten-Hub wird aufgebaut...</span></div>
-            </div>
+            <h3 id="verkehrStatus">📍 Live IoT Park-Sensoren (Dortmund)</h3>
+            <div id="sensorListContainer"></div>
         </div>
     </div>
 
     <script>
+        const pufferVerkehr = [
+            { name: "Südwall (Puffer)", status: "Frei", farbe: "#2ecc71" },
+            { name: "Ostwall (Puffer)", status: "Belegt", farbe: "#e74c3c" }
+        ];
+
+        function renderVerkehr(daten) {
+            const container = document.getElementById("sensorListContainer");
+            container.innerHTML = "";
+            daten.forEach(d => {
+                const row = document.createElement("div");
+                row.className = "data-row";
+                row.innerHTML = `<span>🚗 ${d.name}</span> <strong style="color: ${d.farbe}">${d.status}</strong>`;
+                container.appendChild(row);
+            });
+        }
+
         async function ladeVerkehrsSensoren() {
             try {
                 const response = await fetch("https://opendatasoft.com");
+                if(!response.ok) throw new Error();
                 const data = await response.json();
-                const container = document.getElementById("sensorListContainer");
-                container.innerHTML = "";
 
                 if(data.results && data.results.length > 0) {
-                    data.results.forEach(rec => {
-                        const name = rec.parking_space_name || "IoT Stellplatz";
-                        const statusText = (rec.status === "occupied" || rec.status === "belegt") ? "Belegt" : "Frei";
-                        const farbe = statusText === "Belegt" ? "#e74c3c" : "#2ecc71";
-
-                        const row = document.createElement("div");
-                        row.className = "data-row";
-                        row.innerHTML = `<span>🚗 ${name}</span> <strong style="color: ${farbe}">${statusText}</strong>`;
-                        container.appendChild(row);
+                    const liveDaten = data.results.map(r => {
+                        const istBelegt = r.status === "occupied" || r.status === "belegt";
+                        return {
+                            name: r.parking_space_name || "IoT Stellplatz",
+                            status: istBelegt ? "Belegt" : "Frei",
+                            farbe: istBelegt ? "#e74c3c" : "#2ecc71"
+                        };
                     });
-                } else {
-                    container.innerHTML = "<div class='data-row'>Keine Daten empfangen.</div>";
-                }
+                    renderVerkehr(liveDaten);
+                } else { throw new Error(); }
             } catch(e) {
-                document.getElementById("sensorListContainer").innerHTML = "<div class='data-row'>API-Fehler beim Datenabruf.</div>";
+                renderVerkehr(pufferVerkehr);
+                document.getElementById("verkehrStatus").innerText += " [Puffer-Modus]";
             }
         }
         ladeVerkehrsSensoren();
