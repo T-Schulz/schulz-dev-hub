@@ -10,7 +10,7 @@
             --bg: #f4f4f9;
             --text: #333;
             --card-bg: #ffffff;
-            --accent: #27ae60; /* Grüner Akzent für Umwelt */
+            --accent: #27ae60;
             --accent-hover: #219150;
             --border: #e0e0e0;
         }
@@ -74,7 +74,6 @@
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
         
-        /* Platzhalter für das Live-Diagramm */
         .chart-placeholder {
             background: rgba(0,0,0,0.02);
             border: 2px dashed var(--border);
@@ -91,7 +90,6 @@
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Zentrale</a>
-        
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
             <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
@@ -99,13 +97,13 @@
 
         <div class="card">
             <h2>Luftqualität & Klimasensoren</h2>
-            <p>Diese Unterseite verarbeitet zukünftig die Feinstaubdaten (PM2.5 und PM10) aus Dortmund-Mitte über die Schnittstellen von <code>sensor.community</code>.</p>
+            <p>Schnittstelle bereit für die offiziellen Dortmunder Klimamessdaten des Umweltamtes.</p>
         </div>
 
         <div class="card">
             <h3>📈 Feinstaub-Verlauf (24h)</h3>
             <div class="chart-placeholder">
-                [Diagramm-Modul bereit für API-Daten]
+                [Warte auf Datenabruf...]
             </div>
         </div>
     </div>

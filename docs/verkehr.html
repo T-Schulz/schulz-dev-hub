@@ -9,7 +9,7 @@
             --bg: #f4f4f9;
             --text: #333;
             --card-bg: #ffffff;
-            --accent: #2980b9; /* Blauer Akzent für Verkehr */
+            --accent: #2980b9;
             --accent-hover: #2471a3;
             --border: #e0e0e0;
         }
@@ -73,7 +73,6 @@
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
         
-        /* Simpeler Daten-Container */
         .data-row {
             display: flex;
             justify-content: space-between;
@@ -85,7 +84,6 @@
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Zentrale</a>
-        
         <header>
             <h1>🚗 Parken & Verkehr</h1>
             <button class="btn-toggle" id="themeToggle">🌓 Modus wechseln</button>
@@ -93,17 +91,17 @@
 
         <div class="card">
             <h2>Mobilitäts-Überwachung</h2>
-            <p>Hier laufen zukünftig die Echtzeit-Statusmeldungen der Dortmunder LoRaWAN-Parksensoren ein.</p>
+            <p>Hier laufen zukünftig tabellarische Auswertungen zu den E-Ladesäulen und Behindertenparkplätzen ein.</p>
         </div>
 
         <div class="card">
             <h3>📍 Sensor-Statusübersicht</h3>
             <div class="data-row">
-                <span>Sensor ID #4812 (Zentrum)</span>
+                <span>Sensor ID #4812 (Hauptbahnhof)</span>
                 <strong style="color: #e74c3c;">Belegt</strong>
             </div>
             <div class="data-row">
-                <span>Sensor ID #4813 (Wallring)</span>
+                <span>Sensor ID #4813 (Reinoldikirche)</span>
                 <strong style="color: #27ae60;">Frei</strong>
             </div>
         </div>

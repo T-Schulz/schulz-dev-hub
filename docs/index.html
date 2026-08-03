@@ -16,7 +16,7 @@
             --accent: #007bff;
             --accent-hover: #0056b3;
             --border: #e0e0e0;
-            --map-tiles-filter: none; /* Normale helle Karte */
+            --map-tiles-filter: none;
         }
         [data-theme="dark"] {
             --bg: #121212;
@@ -25,7 +25,7 @@
             --accent: #00adb5;
             --accent-hover: #00f5ff;
             --border: #333333;
-            --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); /* Dunkle Karte */
+            --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -106,16 +106,15 @@
         h2, h3 { margin-top: 0; }
         p { line-height: 1.6; color: var(--text); opacity: 0.9; }
 
-        /* Integriertes Styling für das Karten-Element */
+        /* KORREKTUR: Feste, erzwungene Höhe für die Kartendarstellung */
         #map {
-            height: 350px;
+            height: 450px !important;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
             z-index: 1;
         }
-        /* Filter-Logik für den Dunkelmodus der OSM-Karte */
         .leaflet-tile-container {
             filter: var(--map-tiles-filter);
         }
@@ -133,10 +132,7 @@
             <h2>Willkommen auf meiner digitalen Schaltzentrale</h2>
             <p>Dieses Repository bündelt meine Automatisierungsskripte, Experimente und technischen Workflows an einem zentralen Ort.</p>
             
-            <!-- START_BADGES -->
-            <div class="badge-container" id="dynamicBadges">
-                <!-- Die Schilder werden hier gleich automatisch reingeladen -->
-            </div>
+            <div class="badge-container" id="dynamicBadges"></div>
 
             <script>
                 const basisUrl = "https://" + "img." + "shields" + ".io/badge/";
@@ -147,7 +143,7 @@
                     { name: "Markdown", farbe: "000000", logo: "markdown" },
                     { name: "HTML5", farbe: "E34F26", logo: "html5" },
                     { name: "CSS3", farbe: "1572B6", logo: "css3" },
-                    { name: "Leaflet", farbe: "199900", logo: "leaflet" } // Neues Badge für die Karte
+                    { name: "Leaflet", farbe: "199900", logo: "leaflet" }
                 ];
 
                 const container = document.getElementById("dynamicBadges");
@@ -159,17 +155,16 @@
                     container.appendChild(img);
                 });
             </script>
-            <!-- ENDE_BADGES -->
         </div>
 
-        <!-- Integrierter Punkt 1: Smart City Karte Dortmund -->
+        <!-- Smart City Leitstelle Dortmund -->
         <div class="card">
-            <h3>🗺️ Live Smart City Leitstelle</h3>
-            <p>Interaktive OpenStreetMap-Visualisierung des Dortmunder Stadtgebiets zur Lokalisierung von IoT-Sensoren und Verkehrsdaten.</p>
+            <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
+            <p>Echtzeit-Anzeige der städtischen IoT-Infrastruktur. Grüne Marker zeigen freie, rote Marker belegte LoRaWAN-Flächen.</p>
             <div id="map"></div>
         </div>
 
-        <!-- Projekt-Kacheln (Umgewandelt in deine Unterseiten) -->
+        <!-- Projekt-Kacheln als Navigation -->
         <div class="grid">
             <div class="card">
                 <h3>🌱 Umwelt & Wetter</h3>
@@ -185,24 +180,65 @@
         </div>
     </div>
 
-    <!-- Leaflet JS für die Kartenfunktionalität -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com"></script>
     <script>
-        // Karte initialisieren und auf Dortmund zentrieren
+        // 1. Karte initialisieren und auf Dortmund zentrieren
         var map = L.map('map').setView([51.5136, 7.4653], 13);
 
-        // OSM Kacheln laden
+        // 2. OSM Kacheln laden
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Beispiel-Marker setzen
-        L.marker([51.514, 7.465]).addTo(map)
-            .bindPopup('<b>Smart City Zentrale Dortmund</b><br>Sensor-Netzwerk online.');
+        // 3. Echte Live-Daten über die kostenlose Opendatasoft API abrufen
+        const apiUrl = "https://opendatasoft.com";
 
-        // Theme-Wechsler Logik (Bestehendes System erweitert um Karten-Refresh)
+        // Farbige Standard-Punkte generieren statt schweren Bild-Dateien
+        function erstelleMarkerIcon(status) {
+            const farbe = (status === "occupied" || status === "belegt") ? "#e74c3c" : "#2ecc71";
+            return L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color: ${farbe}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+        }
+
+        async function ladeParksensoren() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.records) {
+                    data.records.forEach(item => {
+                        const record = item.record.fields;
+                        
+                        // Prüfen ob Geodaten vorhanden sind
+                        if (record.geo_point_2d) {
+                            const lat = record.geo_point_2d.lat;
+                            const lon = record.geo_point_2d.lon;
+                            const status = record.status || "unbekannt";
+                            const name = record.parking_space_name || "IoT Stellplatz";
+                            const art = record.parking_space_type || "Allgemein";
+
+                            // Marker auf Karte setzen
+                            L.marker([lat, lon], { icon: erstelleMarkerIcon(status) })
+                             .addTo(map)
+                             .bindPopup(`<b>${name}</b><br>Typ: ${art}<br>Status: <b>${status.toUpperCase()}</b>`);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Fehler beim Abrufen der Echtzeit-Sensoren:", error);
+            }
+        }
+
+        // Ausführen
+        ladeParksensoren();
+
+        // Theme-Wechsler
         const btn = document.getElementById("themeToggle");
-        
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
@@ -211,8 +247,6 @@
             const currentTheme = document.documentElement.getAttribute("data-theme");
             const newTheme = currentTheme === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", newTheme);
-            
-            // Verhindert Darstellungsfehler der Karte beim Umschalten des Modus
             setTimeout(() => { map.invalidateSize(); }, 300); 
         });
     </script>
