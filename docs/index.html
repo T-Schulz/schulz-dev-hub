@@ -100,7 +100,7 @@
 
         <div class="card">
             <h3>🗺️ Live Smart City Leitstelle Dortmund</h3>
-            <p id="mapStatus">Status: Verbinde mit städtischen IoT-Servern...</p>
+            <p id="mapStatus" style="font-weight: bold;">Status: Verbinde mit städtischen IoT-Servern...</p>
             <div id="map"></div>
         </div>
 
@@ -137,38 +137,41 @@
             badgeContainer.appendChild(img);
         });
 
-        // 1. Karte initialisieren und zentrieren
+        // 1. Karte initialisieren und auf Dortmund zentrieren
         var map = L.map('map').setView([51.5136, 7.4653], 13);
+        
+        // 2. OpenStreetMap Kacheln laden
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // PUFFER-DATEN: Schützt vor API-Ausfällen der Stadt
+        // FALLBACK-PUFFER: Falls die API blockiert
         const pufferSensoren = [
-            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Puffer)", status: "frei" },
-            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Puffer)", status: "belegt" },
-            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Puffer)", status: "frei" }
+            { lat: 51.5142, lon: 7.4661, name: "Stellplatz Wallring (Backup)", status: "frei" },
+            { lat: 51.5121, lon: 7.4612, name: "Stellplatz Hauptbahnhof (Backup)", status: "belegt" },
+            { lat: 51.5175, lon: 7.4710, name: "Stellplatz Reinoldikirche (Backup)", status: "frei" }
         ];
 
-        function zeichneMarker(lat, lon, name, status) {
+        function zeichneStandardMarker(lat, lon, name, status) {
+            // FIX: Verwendung des stabilen Standard-Pins ohne fehlerhaftes Custom-Styling
             L.marker([lat, lon]).addTo(map)
              .bindPopup(`<b>${name}</b><br>Status: ${status.toUpperCase()}`);
         }
 
+        // Live-Daten-Abruf über das städtische Portal
         async function ladeParksensoren() {
-            const statusText = document.getElementById("mapStatus");
+            const statusLabel = document.getElementById("mapStatus");
             try {
-                // Zugriff auf das korrekte Opendatasoft-Dataset der Stadt Dortmund
                 const response = await fetch("https://opendatasoft.com");
                 
-                if (!response.ok) throw new Error("API antwortet nicht ordnungsgemäß.");
+                if (!response.ok) throw new Error("Netzwerkfehler");
                 
                 const data = await response.json();
                 
                 if (data.results && data.results.length > 0) {
                     data.results.forEach(record => {
                         if (record.geo_point_2d) {
-                            zeichneMarker(
+                            zeichneStandardMarker(
                                 record.geo_point_2d.lat, 
                                 record.geo_point_2d.lon, 
                                 record.parking_space_name || "IoT Stellplatz", 
@@ -176,22 +179,24 @@
                             );
                         }
                     });
-                    statusText.innerText = "Status: Live-Daten geladen ✔";
-                    statusText.style.color = "#27ae60";
+                    statusLabel.innerText = "Status: Live-Daten erfolgreich geladen ✔";
+                    statusLabel.style.color = "#27ae60";
                 } else {
-                    throw new Error("Leeres Ergebnis");
+                    throw new Error("API lieferte leeres Array");
                 }
             } catch (error) {
-                console.warn("API Fehler - Puffer-Daten werden stattdessen geladen:", error);
+                console.warn("API blockiert oder offline - Puffer-Daten werden geladen:", error);
                 // Schaltet unbemerkt auf Puffer-Messungen um
-                pufferSensoren.forEach(p => zeichneMarker(p.lat, p.lon, p.name, p.status));
-                statusText.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️";
-                statusText.style.color = "#e67e22";
+                pufferSensoren.forEach(p => zeichneStandardMarker(p.lat, p.lon, p.name, p.status));
+                statusLabel.innerText = "Status: API offline - Backup-Puffer aktiv ⚠️";
+                statusLabel.style.color = "#e67e22";
             }
         }
+        
+        // Skript starten
         ladeParksensoren();
 
-        // Theme Toggle
+        // Theme-Wechsler
         document.getElementById("themeToggle").addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", currentTheme);
