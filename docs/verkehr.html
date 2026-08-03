@@ -25,9 +25,9 @@
         </header>
 
         <div class="card">
-            <h3>📍 Sensor-Statusübersicht (Echtzeit)</h3>
+            <h3>📍 Live IoT Park-Sensoren (Dortmund)</h3>
             <div id="sensorListContainer">
-                <div class="data-row"><span>Lade Parkplätze aus Dortmund...</span></div>
+                <div class="data-row"><span>Verbindung zum städtischen Daten-Hub wird aufgebaut...</span></div>
             </div>
         </div>
     </div>
@@ -52,7 +52,7 @@
                         container.appendChild(row);
                     });
                 } else {
-                    container.innerHTML = "<div class='data-row'>Keine Parkdaten empfangen.</div>";
+                    container.innerHTML = "<div class='data-row'>Keine Daten empfangen.</div>";
                 }
             } catch(e) {
                 document.getElementById("sensorListContainer").innerHTML = "<div class='data-row'>API-Fehler beim Datenabruf.</div>";

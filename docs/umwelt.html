@@ -28,7 +28,7 @@
         <div class="card">
             <h3>📈 Aktuelle städtische Klimasensoren (Dortmund)</h3>
             <div id="klimaDatenContainer">
-                <div class="data-row"><span>Lade Echtzeitdaten...</span></div>
+                <div class="data-row"><span>Lade städtische Klimadaten...</span></div>
             </div>
         </div>
     </div>
@@ -56,7 +56,7 @@
                     container.innerHTML = "<div class='data-row'>Keine Daten im städtischen Daten-Feed gefunden.</div>";
                 }
             } catch(e) {
-                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Abruf-Fehler.</div>";
+                document.getElementById("klimaDatenContainer").innerHTML = "<div class='data-row'>Abruf-Fehler von der städtischen API.</div>";
             }
         }
         ladeKlimaDaten();
