@@ -55,7 +55,7 @@
             margin-bottom: 20px;
         }
         
-        /* UNBLOCKBARER KARTEN-CONTAINER (Reines CSS/SVG-Straßennetz) */
+        /* KARTEN-CONTAINER (CSS/SVG-Straßennetz) */
         #map-container {
             height: 450px;
             width: 100%;
@@ -100,7 +100,7 @@
             z-index: 10;
             max-width: 260px;
             border: 1px solid #ccc;
-            display: none; /* Wird per Klick aktiv */
+            display: none;
         }
         [data-theme="dark"] .map-popup {
             background: rgba(30, 30, 30, 0.95);
@@ -108,26 +108,55 @@
             border-color: #444;
         }
 
-        /* Pulsierende Smart-City-Marker */
+        /* REPARATUR: Garantiert textfreie, kreisrunde IoT-Marker */
         .iot-marker {
             position: absolute;
             width: 14px;
             height: 14px;
-            border-radius: 50%;
-            border: 2px solid white;
+            border-radius: 50% !important;
+            border: 2px solid white !important;
             box-shadow: 0 0 6px rgba(0,0,0,0.4);
             cursor: pointer;
-            transition: transform 0.2s;
             z-index: 5;
-        }
-        .iot-marker:hover {
-            transform: scale(1.3);
+            padding: 0 !important;
+            margin: 0 !important;
+            text-indent: -9999px; /* Verbannt jeglichen Text unlesbar aus dem sichtbaren Feld */
+            overflow: hidden;
+            display: block;
         }
         
-        /* Standorte der Puffer-Sensoren im Dortmunder Raster */
-        .sensor-1 { top: 35%; left: 52%; background-color: #2ecc71; } /* Wallring Frei */
-        .sensor-2 { top: 58%; left: 34%; background-color: #e74c3c; } /* Hbf Belegt */
-        .sensor-3 { top: 25%; left: 68%; background-color: #2ecc71; } /* Reinoldi Frei */
+        /* Standorte im Dortmund-Raster mit pulsierendem Leuchteffekt */
+        .sensor-1 { 
+            top: 35%; 
+            left: 52%; 
+            background-color: #2ecc71; 
+            box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7), 0 0 6px rgba(0,0,0,0.4);
+            animation: pulse-green 2s infinite;
+        } 
+        .sensor-2 { 
+            top: 58%; 
+            left: 34%; 
+            background-color: #e74c3c; 
+            box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7), 0 0 6px rgba(0,0,0,0.4);
+            animation: pulse-red 2s infinite;
+        } 
+        .sensor-3 { 
+            top: 25%; 
+            left: 68%; 
+            background-color: #2ecc71; 
+            box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7), 0 0 6px rgba(0,0,0,0.4);
+            animation: pulse-green 2s infinite;
+        }
+
+        /* Pulsierende Animationen für die Punkte */
+        @keyframes pulse-green {
+            70% { box-shadow: 0 0 0 8px rgba(46, 204, 113, 0), 0 0 6px rgba(0,0,0,0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0), 0 0 6px rgba(0,0,0,0.4); }
+        }
+        @keyframes pulse-red {
+            70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0), 0 0 6px rgba(0,0,0,0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0), 0 0 6px rgba(0,0,0,0.4); }
+        }
 
         .console-box {
             background-color: #1e1e1e !important;
@@ -149,23 +178,21 @@
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Sandbox-Modus aktiv ✔ (v7.1.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Sandbox-Modus aktiv ✔ (v7.2.0)</div>
         </header>
 
         <div class="card">
             <div id="map-container">
-                <!-- Vektorbasiertes Straßennetz von Dortmund (Wird lokal gerendert) -->
                 <svg class="vector-roads" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <path d="M0,35 L100,35 M0,55 L100,55 M45,0 L45,100 M65,0 L65,100 M20,0 L80,100" />
                 </svg>
 
-                <!-- Die interaktive Klick-Box für die Sensoren -->
                 <div class="map-popup" id="popupBox">
                     <b id="popupTitle">Sensor-Details</b><br>
                     <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
                 </div>
 
-                <!-- Unblockbare IoT-Sensor-Pins -->
+                <!-- Unblockbare IoT-Sensor-Pins (Vollständig textbereinigt) -->
                 <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Wallring-Ost', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Temperatur: 19.4°C')"></div>
                 <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style="color:#e74c3c">BELEGT</b><br>Dauer: 42 Min.')"></div>
                 <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Reinoldikirche', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
@@ -174,11 +201,10 @@
 
         <h3>💻 Live-Server-Konsole</h3>
         <div class="console-box" id="debugConsole">
-            [v7.1.0 Firewall-Schutz-System aktiv]<br>
+            [v7.2.0 Firewall-Schutz-System aktiv]<br>
         </div>
     </div>
 
-    <!-- Vollkommen autarkes Skript: Keine externen Skript-Abhängigkeiten mehr -->
     <script>
         function printLog(text, farbe = "#00ff00") {
             const konsole = document.getElementById("debugConsole");
@@ -189,7 +215,6 @@
             }
         }
 
-        // Steuert das Öffnen der Infoboxen beim Klick auf die Marker
         function zeigeDetails(titel, text) {
             const popup = document.getElementById("popupBox");
             document.getElementById("popupTitle").innerHTML = titel;
@@ -201,11 +226,10 @@
         function initialisiereSystem() {
             printLog("Externe Skriptblockade erfolgreich umgangen! ✔", "#2ecc71");
             printLog("Isoliertes CSS/SVG-Kartenraster Dortmund erfolgreich gerendert ✔");
-            printLog("Sicherheits-Puffer-Daten erfolgreich geladen ✔");
+            printLog("Textfragmente aus den Markern entfernt ✔", "#2ecc71");
             printLog("Dashboard voll funktionsfähig online! ✔", "#2ecc71");
         }
 
-        // Sofort ausführen
         window.onload = initialisiereSystem;
     </script>
 </body>
