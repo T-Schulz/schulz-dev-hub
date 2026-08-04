@@ -55,7 +55,7 @@
             margin-bottom: 20px;
         }
         
-        /* UNBLOCKBARER KARTEN-CONTAINER (Echte hochauflösende Dortmund-Karte via Static Maps) */
+        /* UNBLOCKBARER KARTEN-CONTAINER (Lädt dein lokales Repository-Bild) */
         #map-container {
             height: 480px;
             width: 100%;
@@ -64,11 +64,11 @@
             border: 1px solid var(--border);
             position: relative;
             overflow: hidden;
-            /* Lädt eine echte, zentrierte Straßenkarte von Dortmund-Zentrum (Maßstab Zoom 15) */
-            background-image: url('https://yandex.ru');
+            /* REPARATUR: Lädt das Bild direkt aus deinem eigenen GitHub-Ordner */
+            background-image: url('dortmund-map.png');
             background-size: cover;
             background-position: center;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            background-color: #e5e3df;
         }
 
         /* Interaktive Infobox auf der Karte */
@@ -93,7 +93,7 @@
             border-color: #444;
         }
 
-        /* Pulsierende Smart-City-Marker exakt auf die echten Straßen Dortmunds ausgerichtet */
+        /* Kreisrunde, textfreie IoT-Marker */
         .iot-marker {
             position: absolute;
             width: 14px;
@@ -103,14 +103,12 @@
             box-shadow: 0 0 6px rgba(0,0,0,0.4);
             cursor: pointer;
             z-index: 5;
-            padding: 0 !important;
-            margin: 0 !important;
         }
         
-        /* Präzise Positionierung auf der echten Dortmund-Zentrumskarte */
-        .sensor-1 { top: 40%; left: 58%; background-color: #2ecc71; } /* Wallring-Ost / Kaiserstraße */
-        .sensor-2 { top: 52%; left: 32%; background-color: #e74c3c; } /* Hauptbahnhof Ausgang Nord */
-        .sensor-3 { top: 34%; left: 49%; background-color: #2ecc71; } /* Reinoldikirche / Kampstraße */
+        /* Positionen der Pins auf deiner Dortmund-Karte */
+        .sensor-1 { top: 38%; left: 54%; background-color: #2ecc71; } /* Wallring */
+        .sensor-2 { top: 55%; left: 36%; background-color: #e74c3c; } /* Hbf */
+        .sensor-3 { top: 30%; left: 62%; background-color: #2ecc71; } /* Reinoldi */
     </style>
 </head>
 <body>
@@ -119,21 +117,20 @@
         
         <header>
             <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Sicheres Karten-Verfahren aktiv ✔ (v8.5.0)</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Lokales Repository-Bild aktiv ✔ (v9.0.0)</div>
         </header>
 
         <div class="card">
             <div id="map-container">
-                <!-- Die interaktive Klick-Box für die Sensoren -->
                 <div class="map-popup" id="popupBox">
                     <b id="popupTitle">Sensor-Details</b><br>
                     <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
                 </div>
 
-                <!-- Unblockbare IoT-Sensor-Pins platziert auf echten Dortmunder Straßen -->
-                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Wallring-Ost', 'Typ: senseBox Climate<br>Infrastruktur: LoRaWAN-Knoten<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 14 µg/m³')"></div>
-                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: Smart-Parking Bodensensor<br>Infrastruktur: Narrowband-IoT<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 42 Min.')"></div>
-                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Reinoldikirche', 'Typ: Mennekes IoT-Wallbox<br>Infrastruktur: Stadtwerke-Netz<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
+                <!-- Unblockbare IoT-Sensor-Pins -->
+                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Wallring-Ost', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 14 µg/m³')"></div>
+                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 42 Min.')"></div>
+                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Reinoldikirche', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
             </div>
         </div>
     </div>
