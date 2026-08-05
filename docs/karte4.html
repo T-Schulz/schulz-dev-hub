@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dortmund (Karte 4 - IoT Live-Zentrale)</title>
     
-    <!-- LOKALES CSS: Nutzt deine lokal gespeicherte CSS-Datei -->
+    <!-- LOKALES CSS -->
     <link rel="stylesheet" href="leaflet.css" />
     
     <style>
@@ -85,18 +85,6 @@
 
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
         .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
-        
-        /* Sorgt dafür, dass das eingebettete Widget im Pop-up gut aussieht */
-        .leaflet-popup-content {
-            width: 320px !important;
-        }
-        .widget-frame {
-            width: 100%;
-            height: 200px;
-            border: none;
-            margin-top: 5px;
-            border-radius: 4px;
-        }
     </style>
 </head>
 <body>
@@ -109,10 +97,7 @@
         </header>
 
         <div class="card">
-            <!-- Das interaktive Karten-Element -->
             <div id="map"></div>
-
-            <!-- Textfeld zum Protokollieren der Rechtsklicks -->
             <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte zum Kopieren & Protokollieren):</div>
             <textarea class="coord-logger" id="kartenLoggerVier" readonly placeholder="Rechtsklick auf die Karte fügt Daten ein..."></textarea>
         </div>
@@ -123,25 +108,41 @@
     <script src="hbahn-engine.js"></script> 
     
     <script>
-        // Dunkelmodus-Erkennung
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
+        // Globale Funktion, die das Ergebnis der unblockbaren Wetter-API verarbeitet
+        window.processWeatherData = function(data) {
+            if (data && data.current_weather) {
+                const temp = data.current_weather.temperature.toFixed(1) + " °C";
+                const wind = data.current_weather.windspeed.toFixed(1) + " km/h";
+                
+                // Aktualisiere das Pop-up mit den echten Live-Werten aus Dortmund
+                window.umweltMarker.setPopupContent(`
+                    <h3>🌱 Echte Umweltstation (Live)</h3>
+                    <b>Ort:</b> Dortmund Reinoldikirche<br>
+                    <b>Temperatur:</b> ${temp}<br>
+                    <b>Windgeschwindigkeit:</b> ${wind}<br>
+                    <small style="color:#777;">Quelle: Open-Meteo API (Lokal freigegeben)</small>
+                `);
+                
+                document.getElementById("mapStatus").innerHTML = "Status: Reale IoT-Wetterdaten aktiv ✔";
+                document.getElementById("mapStatus").style.color = "#27ae60";
+            }
+        };
+
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte initialisieren und exakt auf Dortmund zentrieren
             const map = L.map('map').setView([51.5143, 7.4640], 14);
 
-            // 2. OpenStreetMap-Kacheln laden
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>'
+                attribution: '&copy; OpenStreetMap'
             }).addTo(map);
 
-            // 3. SKALA (MESSBALKEN) HINZUFÜGEN
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // 4. LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
+            // Koordinatenanzeige unten rechts
             const CoordControl = L.Control.extend({
                 options: { position: 'bottomright' },
                 onAdd: function() {
@@ -155,34 +156,33 @@
             });
             map.addControl(new CoordControl());
 
-            // 5. REALE MARKER ALS SVG-KREISE PLATZIEREN
-            
-            // Sensor 1: Umweltstation (Grün) mit UNBLOCKBAREM WIDGET-INHALT
-            const marker1 = L.circleMarker([51.5143, 7.4682], {
+            // 1. Umwelt-Marker global im Fenster anlegen, damit die API-Funktion darauf zugreifen kann
+            window.umweltMarker = L.circleMarker([51.5143, 7.4682], {
                 radius: 8, fillColor: "#2ecc71", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
-            
-            // Hier betten wir das Widget direkt als HTML in das Popup ein – absolut CORS-sicher!
-            const widgetHtml = `
-                <h3>🌱 Reale Live-Wetterstation</h3>
-                <b>Ort:</b> Dortmund Innenstadt<br>
-                <iframe class="widget-frame" src="https://opensensemap.org"></iframe>
-            `;
-            marker1.bindPopup(widgetHtml, { maxWidth: 340 });
+            window.umweltMarker.bindPopup("Lade Echtzeitdaten... ⏳");
 
-            // Sensor 2: Parkplatz (Rot)
+            // 2. Parkplatz-Marker (Statische Smart-City-Simulation)
             const marker2 = L.circleMarker([51.5178, 7.4591], {
                 radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>Status: <b style='color:#e74c3c'>BELEGT</b><br>Dauer: 42 Min.");
 
-            // Sensor 3: E-Ladesäule (Blau)
+            // 3. E-Ladesäulen-Marker (Statische Smart-City-Simulation)
             const marker3 = L.circleMarker([51.5117, 7.4616], {
                 radius: 8, fillColor: "#3498db", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW");
 
-            // Logger ganz unten aktivieren
+            // ====================================================================
+            // UNBLOCKBARER API-ABRUF VIA DYNAMISCHEM SCRIPT-TAG (Bypasst CORS/Iframes)
+            // ====================================================================
+            // Wir fragen die Koordinaten der Reinoldikirche (51.5143, 7.4682) ab
+            const apiScript = document.createElement("script");
+            apiScript.src = "https://open-meteo.com";
+            document.head.appendChild(apiScript);
+
+            // Logger aktivieren
             activateGlobalRightClickLogger(map, "kartenLoggerVier");
         });
     </script>
