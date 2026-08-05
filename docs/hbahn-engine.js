@@ -5,7 +5,7 @@ function interpolateCoords(p1, p2, fraction) {
     return [lat, lng];
 }
 
-// Hilfsfunktion: Berechnet exakte Position auf einem verschachtelten Linienzug (Polyline)
+// Hilfsfunktion: Berechnet exakte Position auf einem Linienzug (Polyline)
 function getPositionOnRoute(coords, totalFraction) {
     if (totalFraction <= 0) return coords[0];
     if (totalFraction >= 1) return coords[coords.length - 1];
@@ -18,8 +18,11 @@ function getPositionOnRoute(coords, totalFraction) {
     return interpolateCoords(coords[targetSegment], coords[targetSegment + 1], remainder);
 }
 
-// Hauptfunktion zum Starten der Waggon-Animation
+// ====================================================================
+// FAHRPLAN-WAGGON (Echtzeit-Uhrzeit-Kopplung)
+// ====================================================================
 function initWaggonAnimation(map, routeCoords) {
+    // REPARATUR: Hier sind nun die korrekten Pixel-Werte eingetragen!
     const hbahnIcon = L.divIcon({
         className: 'hbahn-icon',
         html: '🚟',
@@ -28,12 +31,12 @@ function initWaggonAnimation(map, routeCoords) {
     });
 
     const waggregateMarker = L.marker(routeCoords[0], { icon: hbahnIcon }).addTo(map);
-    waggregateMarker.bindPopup("<b>H-Bahn Waggon (Linie 50)</b><br>Initialisiere...");
+    waggregateMarker.bindPopup("<b>H-Bahn Waggon (Fahrplan)</b><br>Berechne...");
 
     function updateTrainPosition() {
         const jetzt = new Date();
         const sekundenSeitStunde = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
-        const umlaufZeitSekunden = 600; // 10-Minuten-Takt
+        const umlaufZeitSekunden = 600; 
         const fortschrittImUmlauf = sekundenSeitStunde % umlaufZeitSekunden;
 
         let aktuellePosition;
@@ -44,40 +47,90 @@ function initWaggonAnimation(map, routeCoords) {
             const prozent = fortschrittImUmlauf / 120;
             aktuellePosition = getPositionOnRoute(routeCoords, prozent);
             statusText = `Unterwegs nach: <b>Campus Süd</b><br>Ankunft in ca. ${Math.ceil(120 - fortschrittImUmlauf)} Sek.`;
-            if (statusElement) {
-                statusElement.innerHTML = "Leitstelle: Waggon auf Fahrt Richtung Campus Süd 🟢";
-                statusElement.style.color = "#27ae60";
-            }
+            if (statusElement) statusElement.innerHTML = "Leitstelle: Waggon fahrplanmäßig unterwegs... 🟢";
         } else if (fortschrittImUmlauf >= 120 && fortschrittImUmlauf < 180) {
             aktuellePosition = routeCoords[routeCoords.length - 1];
             statusText = "Status: <b>Halt in Campus Süd</b><br>Fahrgastwechsel aktiv.";
-            if (statusElement) {
-                statusElement.innerHTML = "Leitstelle: Fahrgastwechsel Campus Süd 🟡";
-                statusElement.style.color = "#f39c12";
-            }
+            if (statusElement) statusElement.innerHTML = "Leitstelle: Fahrgastwechsel am Campus 🟡";
         } else if (fortschrittImUmlauf >= 180 && fortschrittImUmlauf < 300) {
             const prozent = (fortschrittImUmlauf - 180) / 120;
             const rueckfahrtCoords = [...routeCoords].reverse();
             aktuellePosition = getPositionOnRoute(rueckfahrtCoords, prozent);
             statusText = `Unterwegs nach: <b>Eichlinghofen</b><br>Ankunft in ca. ${Math.ceil(300 - fortschrittImUmlauf)} Sek.`;
-            if (statusElement) {
-                statusElement.innerHTML = "Leitstelle: Waggon auf Fahrt Richtung Eichlinghofen 🟢";
-                statusElement.style.color = "#27ae60";
-            }
+            if (statusElement) statusElement.innerHTML = "Leitstelle: Waggon fahrplanmäßig unterwegs... 🟢";
         } else {
             aktuellePosition = routeCoords[0];
             const wartezeit = Math.ceil(600 - fortschrittImUmlauf);
-            statusText = `Status: <b>Wartet in Eichlinghofen</b><br>Nächste Abfahrt in ${Math.floor(wartezeit/60)} Min. ${wartezeit%60} Sek.`;
-            if (statusElement) {
-                statusElement.innerHTML = "Leitstelle: Waggon abfahrbereit in Eichlinghofen 🔵";
-                statusElement.style.color = "#2980b9";
-            }
+            statusText = `Status: <b>Wartet in Eichlinghofen</b><br>Nächste Abfahrt in ${Math.floor(wartezeit/60)} Min.`;
+            if (statusElement) statusElement.innerHTML = "Leitstelle: Waggon wartet in Endstation 🔵";
         }
 
         waggregateMarker.setLatLng(aktuellePosition);
-        waggregateMarker.getPopup().setContent(`<h3>🚟 H-Bahn Wagen 04</h3>${statusText}`);
+        waggregateMarker.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${statusText}`);
     }
 
     setInterval(updateTrainPosition, 500);
     updateTrainPosition();
+}
+
+// ====================================================================
+// NEU: PERMANENTER EXPRESS-DUMMY-WAGGON (Pendelt ohne Pause durch)
+// ====================================================================
+function initExpressDummyAnimation(map, routeCoords) {
+    const dummyIcon = L.divIcon({
+        className: 'hbahn-icon',
+        html: '🚀', // Raketen-Symbol oder ein anderes Waggon-Emoji zum Unterscheiden
+        iconSize:,
+        iconAnchor: [11, 11]
+    });
+
+    const dummyMarker = L.marker(routeCoords[0], { icon: dummyIcon }).addTo(map);
+    dummyMarker.bindPopup("<h3>🚀 Express-Test-Waggon</h3>Pendelt ununterbrochen.");
+
+    let vorwaerts = true;
+    let fortschritt = 0;
+
+    function updateExpressPosition() {
+        // Erhöht den Fortschritt alle 100ms um 0.5% -> Eine Richtung dauert exakt 20 Sekunden
+        if (vorwaerts) {
+            fortschritt += 0.005;
+            if (fortschritt >= 1) { fortschritt = 1; vorwaerts = false; }
+        } else {
+            fortschritt -= 0.005;
+            if (fortschritt <= 0) { fortschritt = 0; vorwaerts = true; }
+        }
+
+        const aktuellePosition = getPositionOnRoute(routeCoords, fortschritt);
+        dummyMarker.setLatLng(aktuellePosition);
+        
+        const ziel = vorwaerts ? "Campus Süd" : "Eichlinghofen";
+        dummyMarker.getPopup().setContent(`<h3>🚀 Express-Test-Waggon</h3>Pendelt im Dauertest.<br>Ziel: <b>${ziel</b>}`);
+    }
+
+    setInterval(updateExpressPosition, 100);
+}
+
+// ====================================================================
+// NEU: GLOBALES RECHTSKLICK-KOORDINATEN-WERKZEUG
+// ====================================================================
+function activateGlobalRightClickLogger(map, textareaId) {
+    const loggerTextarea = document.getElementById(textareaId);
+    if (!loggerTextarea) return;
+
+    map.on('contextmenu', function(e) {
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+        const formattedString = `[${lat}, ${lng}], // Klick-Punkt\n`;
+        
+        loggerTextarea.value += formattedString;
+        
+        navigator.clipboard.writeText(`[${lat}, ${lng}]`).then(() => {
+            const statusElement = document.getElementById("mapStatus");
+            if (statusElement) {
+                const alterText = statusElement.innerHTML;
+                statusElement.innerHTML = `📋 Koordinaten kopiert: [${lat}, ${lng}]!`;
+                setTimeout(() => { statusElement.innerHTML = alterText; }, 1500);
+            }
+        });
+    });
 }

@@ -14,7 +14,13 @@
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         #map { height: 520px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
-        .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 18px; font-size: 12px; font-weight: bold; color: white; transition: all 0.2s linear; }
+        
+        /* Waggon Styling */
+        .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 18px; font-size: 12px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
+        
+        /* Sammelbox Styling */
+        .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
+        .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -22,14 +28,18 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h2>🚟 ÖPNV-Leitstelle TU Dortmund (H-Bahn)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Lade System... ⏳</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Initialisiere Leitstelle...</div>
         </header>
         <div class="card">
             <div id="map"></div>
+            
+            <!-- Die universelle Sammelbox -->
+            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte zum Kopieren & Protokollieren):</div>
+            <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick auf die Karte fügt Daten hier ein..."></textarea>
         </div>
     </div>
 
-    <!-- HIER WERDEN ALLE SKRIPTE NADEINANDER GELADEN -->
+    <!-- Skripte nacheinander laden -->
     <script src="leaflet.js"></script>
     <script src="hbahn-data.js"></script>
     <script src="hbahn-engine.js"></script>
@@ -40,24 +50,28 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte auf Strecke 1 ausrichten
+            // 1. Karte laden und fokussieren
             const map = L.map('map').setView([51.4840, 7.4110], 16);
-
-            // 2. Kacheln & Maßstab laden
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // 3. Strecke und Haltestellen aus der ausgelagerten 'hbahnData' zeichnen
+            // 2. Schiene zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
 
-            // Haltestellen platzieren
+            // 3. Haltestellen einzeichnen
             hbahnData.haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, { radius: 9, fillColor: "#00adb5", color: "#ffffff", weight: 2.5, opacity: 1, fillOpacity: 1 })
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
 
-            // 4. ANIMATION STARTEN (Übergibt die Karte und die Route an die Engine)
-            initWaggonAnimation(map, hbahnData.strecke1);
+            // ====================================================================
+            // DIE ENGINE-FUNKTIONEN STARTEN
+            // ====================================================================
+            initWaggonAnimation(map, hbahnData.strecke1);        // 1. Normaler Fahrplan-Waggon (🚟)
+            initExpressDummyAnimation(map, hbahnData.strecke1);  // 2. Schneller Express-Waggon (🚀)
+            
+            // 3. Das globale Rechtsklick-Kopiertool aktivieren (Übergabe der Textarea-ID)
+            activateGlobalRightClickLogger(map, "meinKartenLogger");
         });
     </script>
 </body>
