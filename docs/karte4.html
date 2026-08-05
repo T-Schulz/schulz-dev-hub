@@ -4,227 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dortmund (Karte 4 - IoT Live-Zentrale)</title>
-    
-    <!-- LOKALES CSS -->
     <link rel="stylesheet" href="leaflet.css" />
-    
     <style>
-        :root {
-            --bg: #f4f4f9;
-            --text: #333;
-            --card-bg: #ffffff;
-            --accent: #007bff;
-            --border: #e0e0e0;
-        }
-        [data-theme="dark"] {
-            --bg: #121212;
-            --text: #e0e0e0;
-            --card-bg: #1e1e1e;
-            --accent: #00adb5;
-            --border: #333333;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 40px 20px;
-        }
+        :root { --bg: #f4f4f9; --text: #333; --card-bg: #ffffff; --accent: #007bff; --border: #e0e0e0; }
+        [data-theme="dark"] { --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --accent: #00adb5; --border: #333333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .btn-link {
-            display: inline-block;
-            background-color: #333;
-            color: white !important;
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-bottom: 15px;
-            cursor: pointer;
-            border: none;
-        }
-        .card {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            margin-bottom: 20px;
-        }
-        
-        #map {
-            height: 480px;
-            width: 100%;
-            margin-top: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            z-index: 1;
-        }
-
-        .coordinate-box {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 4px 8px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #333;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        [data-theme="dark"] .coordinate-box {
-            background: rgba(30, 30, 30, 0.8);
-            color: #e0e0e0;
-            border-color: #555;
-        }
-
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+        #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
+        .coordinate-box { background: rgba(255, 255, 255, 0.8); padding: 4px 8px; font-family: monospace; font-size: 11px; color: #333; border-radius: 4px; border: 1px solid #ccc; }
+        [data-theme="dark"] .coordinate-box { background: rgba(30, 30, 30, 0.8); color: #e0e0e0; border-color: #555; }
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
         .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
-        
-        /* Button für die manuelle Sensorabfrage im Popup */
-        .btn-refresh {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            margin-top: 5px;
-            font-weight: bold;
-        }
+        .btn-refresh { background-color: var(--accent); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 8px; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptseite</a>
-        
         <header>
             <h2>🗺️ Dortmund (IoT Live-Zentrale)</h2>
             <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Autarkes IoT-Netz aktiv ✔</div>
         </header>
-
-        <div class="card">
-            <div id="map"></div>
-            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte zum Kopieren & Protokollieren):</div>
-            <textarea class="coord-logger" id="kartenLoggerVier" readonly placeholder="Rechtsklick auf die Karte fügt Daten ein..."></textarea>
+        <div class="card"><div id="map"></div>
+            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte kopiert):</div>
+            <textarea class="coord-logger" id="kartenLoggerVier" readonly placeholder="Rechtsklick fügt Daten ein..."></textarea>
         </div>
     </div>
 
-    <!-- LOKALE SKRIPTE -->
     <script src="leaflet.js"></script>
     <script src="hbahn-engine.js"></script> 
-    
     <script>
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.setAttribute("data-theme", "dark");
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute("data-theme", "dark");
+
+        const iotSpeicher = { wetter: { g: false, h: "" }, park: { g: false, h: "" }, lade: { g: false, h: "" } };
+
+        function genWerte(t) {
+            if (t === 'wetter') return `<b>Temperatur:</b> ${(Math.random()*(25-12)+12).toFixed(1)} °C<br><b>Feuchtigkeit:</b> ${Math.floor(Math.random()*(80-45)+45)} %<br><b>Feinstaub:</b> ${Math.floor(Math.random()*(35-8)+8)} µg/m³`;
+            if (t === 'park') return Math.random() > 0.4 ? `<b>Status:</b> <span style="color:#e74c3c;font-weight:bold;">BELEGT</span><br><b>Dauer:</b> ${Math.floor(Math.random()*120+5)} Min.` : `<b>Status:</b> <span style="color:#2ecc71;font-weight:bold;">FREI</span><br><b>Dauer:</b> -`;
+            if (t === 'lade') return Math.random() > 0.3 ? `<b>Status:</b> <span style="color:#2ecc71;font-weight:bold;">FREI</span><br><b>Leistung:</b> 22 kW` : `<b>Status:</b> <span style="color:#e74c3c;font-weight:bold;">LÄDT</span><br><b>Leistung:</b> 11 kW`;
         }
 
-        // Lokaler Generator für realistische Sensordaten (Unblockbar)
-        function generiereSensordaten(typ) {
-            if (typ === 'wetter') {
-                const temp = (Math.random() * (25 - 12) + 12).toFixed(1); // 12 bis 25 Grad
-                const feucht = Math.floor(Math.random() * (80 - 45) + 45); // 45% bis 80%
-                const dust = Math.floor(Math.random() * (35 - 8) + 8); // 8 bis 35 µg/m³
-                return `<b>Temperatur:</b> ${temp} °C<br><b>Feuchtigkeit:</b> ${feucht} %<br><b>Feinstaub PM2.5:</b> ${dust} µg/m³`;
-            }
-            if (typ === 'park') {
-                const besetzt = Math.random() > 0.4;
-                const dauer = Math.floor(Math.random() * 120 + 5);
-                return besetzt ? `<b>Status:</b> <span style="color:#e74c3c;font-weight:bold;">BELEGT</span><br><b>Dauer:</b> ${dauer} Min.` : `<b>Status:</b> <span style="color:#2ecc71;font-weight:bold;">FREI</span><br><b>Dauer:</b> -`;
-            }
-            if (typ === 'lade') {
-                const frei = Math.random() > 0.3;
-                return frei ? `<b>Status:</b> <span style="color:#2ecc71;font-weight:bold;">FREI</span><br><b>Leistung:</b> 22 kW (Typ 2)` : `<b>Status:</b> <span style="color:#e74c3c;font-weight:bold;">LÄDT</span><br><b>Leistung:</b> 11 kW (aktiv)`;
-            }
-        }
+        window.aktualisiereGeoData = function(t) {
+            iotSpeicher[t].h = genWerte(t); iotSpeicher[t].g = true;
+            const el = document.getElementById(`live-data-${t}`);
+            if (el) el.innerHTML = iotSpeicher[t].h;
+        };
 
         document.addEventListener("DOMContentLoaded", function() {
             const map = L.map('map').setView([51.5143, 7.4640], 14);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(map);
-
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // Koordinatenanzeige unten rechts
             const CoordControl = L.Control.extend({
                 options: { position: 'bottomright' },
                 onAdd: function() {
-                    const container = L.DomUtil.create('div', 'coordinate-box');
-                    container.innerHTML = "Lat: 51.5143, Lon: 7.4640";
-                    map.on('mousemove', function(e) {
-                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(4)}, Lon: ${e.latlng.lng.toFixed(4)}`;
-                    });
-                    return container;
+                    const c = L.DomUtil.create('div', 'coordinate-box'); c.innerHTML = "Lat: 51.5143, Lon: 7.4640";
+                    map.on('mousemove', e => { c.innerHTML = `Lat: ${e.latlng.lat.toFixed(4)}, Lon: ${e.latlng.lng.toFixed(4)}`; }); return c;
                 }
             });
             map.addControl(new CoordControl());
 
-            // 1. Umwelt-Marker (Grün)
-            const marker1 = L.circleMarker([51.5143, 7.4682], {
-                radius: 8, fillColor: "#2ecc71", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
-            }).addTo(map);
-            
-            function updateWetterPopup() {
-                marker1.bindPopup(`
-                    <h3>🌱 Umweltstation Reinoldikirche</h3>
-                    <b>Typ:</b> senseBox Climate (LoRaWAN)<br>
-                    ${generiereSensordaten('wetter')}<br>
-                    <button class="btn-refresh" onclick="window.abfrageTelemetrie('wetter')">Daten abfragen 🔄</button>
-                `).openPopup();
+            function setPop(title, sub, t) {
+                if (!iotSpeicher[t].g) { iotSpeicher[t].h = genWerte(t); iotSpeicher[t].g = true; }
+                return `<h3>${title}</h3><b>Typ:</b> ${sub}<br><div id="live-data-${t}">${iotSpeicher[t].h}</div><button class="btn-refresh" onclick="window.aktualisiereGeoData('${t}')">Daten abfragen 🔄</button>`;
             }
-            marker1.on('click', updateWetterPopup);
-            marker1.bindPopup(`<h3>🌱 Umweltstation Reinoldikirche</h3>Klicken für Live-Abfrage.`);
 
-            // 2. Parkplatz-Marker (Rot)
-            const marker2 = L.circleMarker([51.5178, 7.4591], {
-                radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
-            }).addTo(map);
-            
-            function updateParkPopup() {
-                marker2.bindPopup(`
-                    <h3>🚗 Parkplatz Hauptbahnhof</h3>
-                    <b>Typ:</b> Platz-Sensor (NB-IoT)<br>
-                    ${generiereSensordaten('park')}<br>
-                    <button class="btn-refresh" onclick="window.abfrageTelemetrie('park')">Daten abfragen 🔄</button>
-                `).openPopup();
-            }
-            marker2.on('click', updateParkPopup);
-            marker2.bindPopup(`<h3>🚗 Parkplatz Hauptbahnhof</h3>Klicken für Live-Abfrage.`);
+            const m1 = L.circleMarker([51.5143, 7.4682], { radius: 8, fillColor: "#2ecc71", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+            m1.on('click', () => { m1.bindPopup(setPop('🌱 Umweltstation', 'senseBox (LoRaWAN)', 'wetter')).openPopup(); });
+            m1.bindPopup(`<h3>🌱 Umweltstation</h3>Klicken für Telemetrie.`);
 
-            // 3. E-Ladesäulen-Marker (Blau)
-            const marker3 = L.circleMarker([51.5117, 7.4616], {
-                radius: 8, fillColor: "#3498db", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
-            }).addTo(map);
-            
-            function updateLadePopup() {
-                marker3.bindPopup(`
-                    <h3>🔋 E-Ladesäule Stadtgarten</h3>
-                    <b>Typ:</b> IoT-Wallbox Netz<br>
-                    ${generiereSensordaten('lade')}<br>
-                    <button class="btn-refresh" onclick="window.abfrageTelemetrie('lade')">Daten abfragen 🔄</button>
-                `).openPopup();
-            }
-            marker3.on('click', updateLadePopup);
-            marker3.bindPopup(`<h3>🔋 E-Ladesäule Stadtgarten</h3>Klicken für Live-Abfrage.`);
+            const m2 = L.circleMarker([51.5178, 7.4591], { radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+            m2.on('click', () => { m2.bindPopup(setPop('🚗 Parkplatz Hbf', 'Platz-Sensor (NB-IoT)', 'park')).openPopup(); });
+            m2.bindPopup(`<h3>🚗 Parkplatz Hbf</h3>Klicken für Telemetrie.`);
 
-            // Globale Brücke für die Popup-Buttons
-            window.abfrageTelemetrie = function(typ) {
-                if (typ === 'wetter') updateWetterPopup();
-                if (typ === 'park') updateParkPopup();
-                if (typ === 'lade') updateLadePopup();
-            };
+            const m3 = L.circleMarker([51.5117, 7.4616], { radius: 8, fillColor: "#3498db", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+            m3.on('click', () => { m3.bindPopup(setPop('🔋 E-Ladesäule', 'Wallbox Netz', 'lade')).openPopup(); });
+            m3.bindPopup(`<h3>🔋 E-Ladesäule</h3>Klicken für Telemetrie.`);
 
-            // Logger aktivieren
-            activateGlobalRightClickLogger(map, "kartenLoggerVier");
+            if (typeof activateGlobalRightClickLogger !== 'undefined') activateGlobalRightClickLogger(map, "kartenLoggerVier");
         });
     </script>
 </body>
