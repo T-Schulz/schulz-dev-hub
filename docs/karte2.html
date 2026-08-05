@@ -68,7 +68,6 @@
             z-index: 1;
         }
 
-        /* Styling für die Koordinatenbox unten rechts auf der Karte */
         .coordinate-box {
             background: rgba(255, 255, 255, 0.8);
             padding: 4px 8px;
@@ -83,6 +82,10 @@
             color: #e0e0e0;
             border-color: #555;
         }
+
+        /* NEU: Styling für die Sammelbox unter der Karte */
+        .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
+        .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -97,11 +100,16 @@
         <div class="card">
             <!-- Das interaktive Karten-Element -->
             <div id="map"></div>
+
+            <!-- NEU: Textfeld zum Protokollieren der Rechtsklicks -->
+            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte zum Kopieren & Protokollieren):</div>
+            <textarea class="coord-logger" id="kartenLoggerZwei" readonly placeholder="Rechtsklick auf die Karte fügt Daten hier ein..."></textarea>
         </div>
     </div>
 
-    <!-- LOKALES SCRIPT: Nutzt deine lokal gespeicherte JS-Datei -->
+    <!-- LOKALE SKRIPTE -->
     <script src="leaflet.js"></script>
+    <script src="hbahn-engine.js"></script> <!-- NEU: Bindet die ausgelagerte Engine ein -->
     
     <script>
         // Dunkelmodus-Erkennung
@@ -136,40 +144,30 @@
             });
             map.addControl(new CoordControl());
 
-            // 5. REALE MARKER ALS SVG-KREISE PLATZIEREN (Behebt den Grafikfehler komplett)
+            // 5. REALE MARKER ALS SVG-KREISE PLATZIEREN
             
             // Sensor 1: Umweltstation (Grün)
             const marker1 = L.circleMarker([51.5143, 7.4682], {
-                radius: 8,
-                fillColor: "#2ecc71",
-                color: "#ffffff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9
+                radius: 8, fillColor: "#2ecc71", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker1.bindPopup("<h3>🌱 Umweltstation Reinoldikirche</h3>Typ: senseBox Climate<br>GPS: 51.5143, 7.4682<br>Status: <b>AKTIV</b>");
 
             // Sensor 2: Parkplatz (Rot)
             const marker2 = L.circleMarker([51.5178, 7.4591], {
-                radius: 8,
-                fillColor: "#e74c3c",
-                color: "#ffffff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9
+                radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>GPS: 51.5178, 7.4591<br>Status: <b style='color:#e74c3c'>BELEGT</b>");
 
             // Sensor 3: E-Ladesäule (Blau / Grün)
             const marker3 = L.circleMarker([51.5117, 7.4616], {
-                radius: 8,
-                fillColor: "#3498db",
-                color: "#ffffff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9
+                radius: 8, fillColor: "#3498db", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>GPS: 51.5117, 7.4616<br>Status: <b>FREI</b>");
+
+            // ====================================================================
+            // HIER IST DER BESTE PLATZ: GANZO UNTEN IM DOMCONTENTLOADED
+            // ====================================================================
+            activateGlobalRightClickLogger(map, "kartenLoggerZwei");
         });
     </script>
 </body>
