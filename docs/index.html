@@ -29,7 +29,7 @@
             padding: 40px 20px;
             transition: background 0.3s, color 0.3s;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         header {
             display: flex;
             justify-content: space-between;
@@ -59,8 +59,10 @@
         }
         .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
         .badge { height: 24px; border-radius: 4px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .grid, .grid-2 { grid-template-columns: 1fr; } }
         .btn-link {
             display: inline-block;
             background-color: var(--accent);
@@ -114,34 +116,35 @@
             <!-- ENDE_BADGES -->
         </div>
 
-        <!-- 4er und 2-Grid-Navigation für die separaten Karten -->
-        <div class="grid"></div>
-            <div class="card" style="border-top: 4px solid var(--accent);">
-                <h3>🏙️ Smart City Karten Stadt-Beispiele</h3>
+        <!-- 4er-Grid-Navigation für die separaten Karten -->
+        <div class="grid">
+            <div class="card" style="border-top: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                <h3>🏙️ Smart City</h3>
                 <p>Geo-Daten, z.B. IoT-Flächen und Parksensoren.</p>
                 <a class="btn-link" href="karte1.html">Karte 1 öffnen →</a>
             </div>
 
-            <div class="card" style="border-top: 4px solid var(--accent);">
-                <h3>🏙️ Smart City Karten Stadt-Beispiele</h3>
+            <div class="card" style="border-top: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                <h3>🏙️ Smart City</h3>
                 <p>Geo-Daten, z.B. Karte 2.</p>
                 <a class="btn-link" href="karte2.html">Karte 2 öffnen →</a>
             </div>
 
-            <div class="card" style="border-top: 4px solid var(--accent);">
-                <h3>🏙️ Smart City Karten Stadt-Beispiele</h3>
+            <div class="card" style="border-top: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                <h3>🏙️ Smart City</h3>
                 <p>Geo-Daten, z.B. Karte 3.</p>
                 <a class="btn-link" href="karte3.html">Karte 3 öffnen →</a>
             </div>
 
-            <div class="card" style="border-top: 4px solid var(--accent);">
-                <h3>🏙️ Smart City Karten Stadt-Beispiele</h3>
+            <div class="card" style="border-top: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                <h3>🏙️ Smart City</h3>
                 <p>Geo-Daten, z.B. Karte 4.</p>
                 <a class="btn-link" href="karte4.html">Karte 4 öffnen →</a>
             </div>
-        </div> 
+        </div> <!-- HIER schließt das Grid für die 4 Karten -->
 
-        <div class="grid">
+        <!-- 2er-Grid für die Umwelt & Verkehrs-Karten -->
+        <div class="grid-2">
             <div class="card" style="border-top: 4px solid #27ae60;">
                 <h3>🌱 Umwelt & Wetter</h3>
                 <p>Echtzeit-Messwerte zur lokalen Luftqualität (Feinstaub PM2.5/PM10), aktuellen Temperaturen und CO2-Belastung.</p>
