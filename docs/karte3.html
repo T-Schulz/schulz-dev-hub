@@ -14,7 +14,10 @@
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
-        .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 18px; font-size: 12px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
+        
+        /* Waggon CSS Styling */
+        .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 20px; font-size: 14px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
+        
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
         .coord-logger { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
     </style>
@@ -33,7 +36,7 @@
         </div>
     </div>
 
-    <!-- Scripte nacheinander laden -->
+    <!-- Skripte nacheinander laden -->
     <script src="leaflet.js"></script>
     <script src="hbahn-data.js"></script>
     <script src="hbahn-engine.js"></script>
@@ -44,8 +47,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden und ausrichten
-            const map = L.map('map').setView([51.4840, 7.4095], 16);
+            // 1. Karte laden und auf Strecke 1 fokussieren
+            const map = L.map('map').setView([51.4835, 7.4110], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
@@ -58,7 +61,7 @@
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
 
-            // 4. Triebwerke aus externer hbahn-engine.js starten
+            // 4. Triebwerke und Tools aus externer hbahn-engine.js starten
             if (typeof window.initWaggonAnimation !== 'undefined') {
                 window.initWaggonAnimation(map, hbahnData.strecke1);        
                 window.initExpressDummyAnimation(map, hbahnData.strecke1);  

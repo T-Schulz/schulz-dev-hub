@@ -1,12 +1,12 @@
 // Globale Hilfsfunktionen für Geo-Interpolation
 window.interpolateCoords = function(p1, p2, fraction) {
-    const lat = p1[0] + (p2[0] - p1[0]) * fraction;
-    const lng = p1[1] + (p2[1] - p1[1]) * fraction;
+    const lat = p1 + (p2 - p1) * fraction;
+    const lng = p1 + (p2 - p1) * fraction;
     return [lat, lng];
 };
 
 window.getPositionOnRoute = function(coords, totalFraction) {
-    if (totalFraction <= 0) return coords[0];
+    if (totalFraction <= 0) return coords;
     if (totalFraction >= 1) return coords[coords.length - 1];
     const numSegments = coords.length - 1;
     const segmentFraction = 1 / numSegments;
@@ -17,7 +17,13 @@ window.getPositionOnRoute = function(coords, totalFraction) {
 
 // Startet den fahrplanmäßigen Waggon (10-Minuten-Takt)
 window.initWaggonAnimation = function(map, routeCoords) {
-    const icon = L.divIcon({ className: 'hbahn-icon', html: '🚟', iconSize:, iconAnchor: [12, 12] });
+    // REPARATUR: Größenangaben eingetragen, damit das Icon sichtbar ist!
+    const icon = L.divIcon({ 
+        className: 'hbahn-icon', 
+        html: '🚟', 
+        iconSize:, 
+        iconAnchor: [12, 12] 
+    });
     const marker = L.marker(routeCoords[0], { icon: icon }).addTo(map);
     marker.bindPopup("<b>🚟 Fahrplan-Waggon</b>");
 
@@ -48,7 +54,13 @@ window.initWaggonAnimation = function(map, routeCoords) {
 
 // Startet den permanenten Express-Test-Waggon
 window.initExpressDummyAnimation = function(map, routeCoords) {
-    const icon = L.divIcon({ className: 'hbahn-icon', html: '🚀', iconSize:, iconAnchor: [12, 12] });
+    // REPARATUR: Größenangaben eingetragen, damit das Icon sichtbar ist!
+    const icon = L.divIcon({ 
+        className: 'hbahn-icon', 
+        html: '🚀', 
+        iconSize:, 
+        iconAnchor: [12, 12] 
+    });
     const marker = L.marker(routeCoords[0], { icon: icon }).addTo(map);
     marker.bindPopup("<b>🚀 Express-Test-Waggon</b>");
 
