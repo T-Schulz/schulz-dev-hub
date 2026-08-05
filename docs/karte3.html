@@ -67,6 +67,22 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
+            // ====================================================================
+            // NEU: LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG (WIE IN KARTE 2)
+            // ====================================================================
+            const CoordControl = L.Control.extend({
+                options: { position: 'bottomright' },
+                onAdd: function() {
+                    const container = L.DomUtil.create('div', 'coordinate-box');
+                    container.innerHTML = "Lat: 51.48350, Lon: 7.41100";
+                    map.on('mousemove', function(e) {
+                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(5)}, Lon: ${e.latlng.lng.toFixed(5)}`;
+                    });
+                    return container;
+                }
+            });
+            map.addControl(new CoordControl());
+
             // 2. Schienennetz aus hbahn-data.js zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
 
@@ -79,14 +95,11 @@
             // ====================================================================
             // UNBLOCKBARE WAGGON-ANIMATIONEN (Als Canvas-Kreise gerendert)
             // ====================================================================
-            
-            // OPTIMIERUNG: Radius auf 12 erhöht, damit er beim Warten die Haltestelle umschließt!
             const fahrplanWaggon = L.circleMarker(hbahnData.strecke1[0], {
                 radius: 12, fillColor: "#f39c12", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.85
             }).addTo(map);
             fahrplanWaggon.bindPopup("<b>🚟 Fahrplan-Waggon (Linie 50)</b>");
 
-            // Waggon 2: Express-Test-Waggon (Roter Kreis)
             const expressWaggon = L.circleMarker(hbahnData.strecke1[0], {
                 radius: 7, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
             }).addTo(map);
@@ -117,7 +130,6 @@
                     fahrplanText = "Unterwegs nach: <b>Eichlinghofen</b>";
                     statusInfo = "Fahrt nach Eichlinghofen 🟢";
                 } else {
-                    // Wartephase in Eichlinghofen
                     fahrplanPos = hbahnData.strecke1[0];
                     const restWartezeit = Math.ceil(600 - fortschritt);
                     fahrplanText = `Wartet in <b>Eichlinghofen</b>.<br>Nächste Abfahrt in: ${Math.floor(restWartezeit / 60)}m ${restWartezeit % 60}s`;
@@ -126,8 +138,6 @@
                 
                 fahrplanWaggon.setLatLng(fahrplanPos);
                 fahrplanWaggon.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${fahrplanText}`);
-                
-                // Statusfeld oben rechts dynamisch füttern
                 document.getElementById("mapStatus").innerHTML = `Fahrplan-Status: ${statusInfo}`;
 
                 // --- B. Berechnung für den schnellen Express-Waggon ---
