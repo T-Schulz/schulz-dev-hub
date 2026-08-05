@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - TU Dortmund H-Bahn (Debug Mode)</title>
+    <title>Smart City Leitstelle - TU Dortmund H-Bahn</title>
     <link rel="stylesheet" href="leaflet.css" />
     <style>
         :root { --bg: #f4f4f9; --text: #333; --card-bg: #ffffff; --accent: #007bff; --border: #e0e0e0; }
@@ -13,41 +13,15 @@
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
-        #map { height: 420px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
+        #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
         
         /* Waggon Styling */
         .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 18px; font-size: 12px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
         
-        /* Box-Styling für Logs und Koordinaten */
-        .logger-title { margin-top: 15px; font-size: 0.95rem; font-weight: bold; }
-        .coord-logger { width: 100%; height: 80px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
-        
-        /* NEU: Live-Konsole auf der Webseite */
-        .debug-console { width: 100%; height: 120px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 2px solid #e74c3c; background-color: #fadbd8; color: #78281f; box-sizing: border-box; overflow-y: scroll; margin-top: 5px; }
-        [data-theme="dark"] .debug-console { background-color: #78281f; color: #fadbd8; }
+        /* Sammelbox Styling */
+        .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
+        .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
     </style>
-
-    <!-- NEU: DIESER SCRIPT-BLOCK FÄNGT ALLE FEHLER AB, BEVOR ANDERE SKRIPTE GELADEN WERDEN -->
-    <script>
-        window.addEventListener('error', function(e) {
-            const consoleBox = document.getElementById('debugConsole');
-            if (consoleBox) {
-                consoleBox.innerHTML += `❌ FEHLER: ${e.message} in ${e.filename.split('/').pop()} Zeile ${e.lineno}<br>`;
-            }
-            const status = document.getElementById("mapStatus");
-            if (status) {
-                status.innerHTML = "System-Absturz! Details siehe unten ❌";
-                status.style.color = "#e74c3c";
-            }
-        });
-        console.log = (function(oldLog) {
-            return function(msg) {
-                oldLog(msg);
-                const consoleBox = document.getElementById('debugConsole');
-                if (consoleBox) consoleBox.innerHTML += `ℹ️ INFO: ${msg}<br>`;
-            }
-        })(console.log);
-    </script>
 </head>
 <body>
     <div class="container">
@@ -59,60 +33,115 @@
         <div class="card">
             <div id="map"></div>
             
-            <!-- Die universelle Sammelbox -->
-            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick kopiert):</div>
+            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick kopiert & protokolliert):</div>
             <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick fügt Daten ein..."></textarea>
-
-            <!-- NEU: Das Diagnose-Fenster zur Live-Fehleranalyse -->
-            <div class="logger-title" style="color: #e74c3c;">🖥️ Live-Fehlermonitor (Echtzeit-Diagnose):</div>
-            <div class="debug-console" id="debugConsole">System startet Diagnose...<br></div>
         </div>
     </div>
 
-    <!-- Skripte nacheinander laden -->
+    <!-- Skripte laden -->
     <script src="leaflet.js"></script>
-    <script src="hbahn-data.js"></script>
-    <script src="hbahn-engine.js"></script>
+    <script src="hbahn-data.js"></script> <!-- Enthält deine Koordinaten -->
     
     <script>
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
+        // ====================================================================
+        // INTERNE ANIMATIONS-ENGINE (Direkt integriert gegen Browser-Sperren)
+        // ====================================================================
+        function interpolateCoords(p1, p2, fraction) {
+            return [p1[0] + (p2[0] - p1[0]) * fraction, p1[1] + (p2[1] - p1[1]) * fraction];
+        }
+
+        function getPositionOnRoute(coords, totalFraction) {
+            if (totalFraction <= 0) return coords[0];
+            if (totalFraction >= 1) return coords[coords.length - 1];
+            const numSegments = coords.length - 1;
+            const segmentFraction = 1 / numSegments;
+            const targetSegment = Math.floor(totalFraction / segmentFraction);
+            const remainder = (totalFraction % segmentFraction) / segmentFraction;
+            return interpolateCoords(coords[targetSegment], coords[targetSegment + 1], remainder);
+        }
+
+        function initWaggonAnimation(map, routeCoords) {
+            const hbahnIcon = L.divIcon({ className: 'hbahn-icon', html: '🚟', iconSize:, iconAnchor: [12, 12] });
+            const marker = L.marker(routeCoords[0], { icon: hbahnIcon }).addTo(map);
+            marker.bindPopup("<b>H-Bahn Waggon (Fahrplan)</b>");
+
+            setInterval(() => {
+                const jetzt = new Date();
+                const sekunden = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
+                const fortschritt = sekunden % 600; // 10-Minuten-Takt
+                let aktuellePosition, text = "";
+
+                if (fortschritt >= 0 && fortschritt < 120) {
+                    aktuellePosition = getPositionOnRoute(routeCoords, fortschritt / 120);
+                    text = "Unterwegs nach: <b>Campus Süd</b>";
+                } else if (fortschritt >= 120 && fortschritt < 180) {
+                    aktuellePosition = routeCoords[routeCoords.length - 1];
+                    text = "Halt in <b>Campus Süd</b>";
+                } else if (fortschritt >= 180 && fortschritt < 300) {
+                    const rueckCoords = [...routeCoords].reverse();
+                    aktuellePosition = getPositionOnRoute(rueckCoords, (fortschritt - 180) / 120);
+                    text = "Unterwegs nach: <b>Eichlinghofen</b>";
+                } else {
+                    aktuellePosition = routeCoords[0];
+                    text = "Wartet in <b>Eichlinghofen</b>";
+                }
+                marker.setLatLng(aktuellePosition);
+                marker.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${text}`);
+            }, 500);
+        }
+
+        function initExpressDummyAnimation(map, routeCoords) {
+            const dummyIcon = L.divIcon({ className: 'hbahn-icon', html: '🚀', iconSize:, iconAnchor: [12, 12] });
+            const marker = L.marker(routeCoords[0], { icon: dummyIcon }).addTo(map);
+            marker.bindPopup("<h3>🚀 Express-Test-Waggon</h3>");
+
+            let vorwaerts = true, fortschritt = 0;
+            setInterval(() => {
+                if (vorwaerts) { fortschritt += 0.01; if (fortschritt >= 1) vorwaerts = false; }
+                else { fortschritt -= 0.01; if (fortschritt <= 0) vorwaerts = true; }
+                
+                const pos = getPositionOnRoute(routeCoords, fortschritt);
+                marker.setLatLng(pos);
+                marker.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${vorwaerts ? "Campus Süd" : "Eichlinghofen"}</b>`);
+            }, 100); // Bewegt sich alle 100ms
+        }
+
+        function activateGlobalRightClickLogger(map, textareaId) {
+            const logger = document.getElementById(textareaId);
+            if (!logger) return;
+            map.on('contextmenu', (e) => {
+                const chunk = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}], // Klick-Punkt\n`;
+                logger.value += chunk;
+                navigator.clipboard.writeText(`[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`);
+            });
+        }
+
+        // ====================================================================
+        // INITIALISIERUNG
+        // ====================================================================
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("DOM geladen. Starte Leaflet-Setup.");
-            
-            // Überprüfung ob Leaflet überhaupt existiert
-            if (typeof L === 'undefined') {
-                throw new Error("Leaflet ('L') ist nicht definiert! Datei 'leaflet.js' fehlt oder ist fehlerhaft.");
-            }
-            if (typeof hbahnData === 'undefined') {
-                throw new Error("Datanbank-Objekt 'hbahnData' fehlt! Datei 'hbahn-data.js' prüfen.");
-            }
-
             const map = L.map('map').setView([51.4840, 7.4110], 16);
-            console.log("Kartenobjekt erstellt.");
-
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
-            console.log("Kacheln und Skala geladen.");
 
+            // Schienen zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
-            console.log("Strecke 1 gezeichnet.");
 
-            hbahnData.haltestellen.forEach(function(stat, i) {
+            // Haltestellen zeichnen
+            hbahnData.haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, { radius: 9, fillColor: "#00adb5", color: "#ffffff", weight: 2.5, opacity: 1, fillOpacity: 1 })
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
-            console.log("Haltestellen platziert.");
 
-            // Funktionen starten
-            console.log("Starte Waggon-Animationen.");
+            // Engines direkt lokal zünden
             initWaggonAnimation(map, hbahnData.strecke1);        
             initExpressDummyAnimation(map, hbahnData.strecke1);  
             activateGlobalRightClickLogger(map, "meinKartenLogger");
             
-            console.log("System erfolgreich initialisiert!");
             document.getElementById("mapStatus").innerHTML = "Status: Leitstelle online ✔";
         });
     </script>
