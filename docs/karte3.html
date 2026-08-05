@@ -80,15 +80,15 @@
             // UNBLOCKBARE WAGGON-ANIMATIONEN (Als Canvas-Kreise gerendert)
             // ====================================================================
             
-            // Waggon 1: Fahrplan-Waggon (Orange-Gelber Kreis)
+            // OPTIMIERUNG: Radius auf 12 erhöht, damit er beim Warten die Haltestelle umschließt!
             const fahrplanWaggon = L.circleMarker(hbahnData.strecke1[0], {
-                radius: 8, fillColor: "#f39c12", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
+                radius: 12, fillColor: "#f39c12", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.85
             }).addTo(map);
             fahrplanWaggon.bindPopup("<b>🚟 Fahrplan-Waggon (Linie 50)</b>");
 
             // Waggon 2: Express-Test-Waggon (Roter Kreis)
             const expressWaggon = L.circleMarker(hbahnData.strecke1[0], {
-                radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
+                radius: 7, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
             }).addTo(map);
             expressWaggon.bindPopup("<b>🚀 Express-Test-Waggon</b>");
 
@@ -101,24 +101,34 @@
                 const jetzt = new Date();
                 const sekunden = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
                 const fortschritt = sekunden % 600; // 10-Minuten-Umlauf
-                let fahrplanPos, fahrplanText = "";
+                let fahrplanPos, fahrplanText = "", statusInfo = "";
 
                 if (fortschritt >= 0 && fortschritt < 120) {
                     fahrplanPos = calculateCurrentPosition(hbahnData.strecke1, fortschritt / 120);
                     fahrplanText = "Unterwegs nach: <b>Campus Süd</b>";
+                    statusInfo = "Fahrt nach Campus Süd 🟢";
                 } else if (fortschritt >= 120 && fortschritt < 180) {
                     fahrplanPos = hbahnData.strecke1[hbahnData.strecke1.length - 1];
-                    fahrplanText = "Halt in <b>Campus Süd</b>";
+                    fahrplanText = "Halt in <b>Campus Süd</b><br>Fahrgastwechsel.";
+                    statusInfo = "Halt am Campus 🟡";
                 } else if (fortschritt >= 180 && fortschritt < 300) {
                     const rueckfahrtRoute = [...hbahnData.strecke1].reverse();
                     fahrplanPos = calculateCurrentPosition(rueckfahrtRoute, (fortschritt - 180) / 120);
                     fahrplanText = "Unterwegs nach: <b>Eichlinghofen</b>";
+                    statusInfo = "Fahrt nach Eichlinghofen 🟢";
                 } else {
+                    // Wartephase in Eichlinghofen
                     fahrplanPos = hbahnData.strecke1[0];
-                    fahrplanText = "Wartet in <b>Eichlinghofen</b>";
+                    const restWartezeit = Math.ceil(600 - fortschritt);
+                    fahrplanText = `Wartet in <b>Eichlinghofen</b>.<br>Nächste Abfahrt in: ${Math.floor(restWartezeit / 60)}m ${restWartezeit % 60}s`;
+                    statusInfo = `Pause in Eichlinghofen (Abfahrt in ${Math.floor(restWartezeit / 60)}m) 🔵`;
                 }
+                
                 fahrplanWaggon.setLatLng(fahrplanPos);
                 fahrplanWaggon.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${fahrplanText}`);
+                
+                // Statusfeld oben rechts dynamisch füttern
+                document.getElementById("mapStatus").innerHTML = `Fahrplan-Status: ${statusInfo}`;
 
                 // --- B. Berechnung für den schnellen Express-Waggon ---
                 if (expressDirection) {
@@ -132,7 +142,7 @@
                 expressWaggon.setLatLng(expressPos);
                 expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${expressDirection ? "Campus Süd" : "Eichlinghofen"}</b>`);
 
-            }, 50); // Extrem flüssiges Update alle 50 Millisekunden
+            }, 50);
 
             // 5. RECHTSKLICK-LOGGER AKTIVIEREN
             const loggerBox = document.getElementById("meinKartenLogger");
@@ -143,5 +153,3 @@
             });
         });
     </script>
-</body>
-</html>
