@@ -55,7 +55,6 @@
             margin-bottom: 20px;
         }
         
-        /* CONTAINER FÜR DIE KARTE / MIT PRIVACY NOTICE */
         #map-container {
             height: 480px;
             width: 100%;
@@ -66,14 +65,12 @@
             background-color: #e5e3df;
         }
 
-        /* Die Custom HTML-Komponente für die Karte */
         osm-map {
             width: 100%;
             height: 100%;
-            display: none; /* Wird erst eingeblendet, wenn geladen */
+            display: none;
         }
 
-        /* DSGVO / Zwei-Klick-Overlay Box */
         .privacy-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -103,10 +100,6 @@
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-activate:hover {
-            opacity: 0.9;
         }
     </style>
 </head>
@@ -122,14 +115,14 @@
         <div class="card">
             <div id="map-container">
                 
-                <!-- Die blockierende Datenschutz-Box -->
+                <!-- Datenschutz-Box -->
                 <div class="privacy-overlay" id="privacyNotice">
                     <h3>🔒 Datenschutz-Hinweis</h3>
                     <p>Beim Aktivieren der Karte werden Daten vom Drittanbieter-Server (OpenStreetMap & unpkg.com) nachgeladen. Dabei wird Ihre IP-Adresse übertragen.</p>
                     <button class="btn-activate" onclick="erlaubeUndLadeKarte()">Karte laden und Daten akzeptieren</button>
                 </div>
 
-                <!-- Das Custom-Element aus deinem Beispiel mit GPS-Koordinaten für Dortmund -->
+                <!-- Custom-Element mit GPS-Koordinaten für Dortmund -->
                 <osm-map id="meineKarte" topleft="51.5210, 7.4520" bottomright="51.5070, 7.4780">
                     <osm-marker latlon="51.5146, 7.4675" title="🌱 Umweltstation Innenstadt" popup="Typ: senseBox Climate<br>Status: ACTIVE"></osm-marker>
                     <osm-marker latlon="51.5176, 7.4590" title="🚗 Parkplatz Hauptbahnhof" popup="Typ: LoRaWAN Park-Sensor<br>Status: BELEGT"></osm-marker>
@@ -140,94 +133,12 @@
         </div>
     </div>
 
+    <!-- HIER werden die externe Logik-Datei und die Theme-Erkennung geladen -->
+    <script src="map-loader.js"></script>
     <script>
-        // Funktion zum dynamischen Laden von JS-Skripten (aus deinem Beispiel)
-        function loadScript(url, callback) {
-            const script = document.createElement("script");
-            script.type = "text/javascript";
-            script.src = url;
-            script.onload = callback;
-            document.head.appendChild(script);
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute("data-theme", "dark");
         }
-
-        // Wird aufgerufen, wenn der User den Button drückt
-        function erlaubeUndLadeKarte() {
-            // 1. Statusanzeige updaten
-            document.getElementById("mapStatus").innerHTML = "Status: Skripte werden geladen... ⏳";
-            document.getElementById("mapStatus").style.color = "#007bff";
-
-            // 2. Leaflet-Script-Pfad definieren
-            const LeafletBasePath = "https://unpkg.com/leaflet@1.7.1/dist/";
-
-            // 3. Skript nachladen und Custom Elements initialisieren
-            loadScript(`${LeafletBasePath}leaflet.js`, function() {
-                
-                // --- CODE AUS DEINEM BEISPIEL START ---
-                class osmMap extends HTMLElement {
-                    static get observedAttributes() { return ['topleft', 'bottomright']; }
-                    constructor() {
-                        super();
-                        const shadow = this.attachShadow({mode: 'closed'});
-                        this.mapcanvas = document.createElement('div');
-                        this.mapcanvas.className = "mapcanvas";
-                        shadow.appendChild(this.mapcanvas);
-
-                        const style1 = document.createElement('style');
-                        style1.textContent = `@import url('${LeafletBasePath}leaflet.css')`;
-                        shadow.appendChild(style1);
-
-                        const style2 = document.createElement('style');
-                        style2.textContent = `:host { display: block; } .mapcanvas { width: 100%; height: 100%; }`;
-                        shadow.appendChild(style2);
-                    }
-                    connectedCallback() {
-                        this.style.display = "block";
-                        this.mapcanvas.style.height = "100%";
-                        this.mapcanvas.style.width = "100%";
-                        this.makeMap();
-                    }
-                    attributeChangedCallback(name, oldValue, newValue) {
-                        if(this.map) {
-                            let topleft = this.getAttribute("topleft").split(",").map(Number);
-                            let bottomright = this.getAttribute("bottomright").split(",").map(Number);
-                            this.map.fitBounds([ topleft, bottomright ]);
-                        }
-                    }
-                    makeMap() {
-                        let topleft = this.getAttribute("topleft").split(",").map(Number);
-                        let bottomright = this.getAttribute("bottomright").split(",").map(Number);
-                        const bounds = [ topleft, bottomright ];
-                        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            maxZoom: 19,
-                            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a>'
-                        });
-                        const map = L.map(this.mapcanvas, { layers: osm, tap: false });
-                        this.map = map;
-                        L.control.scale({imperial:false}).addTo(map);
-                        map.fitBounds(bounds);
-                        
-                        // Fix für fehlerhafte Kachel-Berechnungen beim verzögerten Laden
-                        setTimeout(() => { map.invalidateSize(); }, 200);
-
-                        map.on("resize", function(e){ map.fitBounds(bounds); });
-                    }
-                }
-                customElements.define('osm-map', osmMap);
-
-                class osmMarker extends HTMLElement {
-                    static get observedAttributes() { return ['latlon', 'title', 'popup']; }
-                    constructor() { super(); L.Icon.Default.prototype.options.imagePath = `${LeafletBasePath}images/`; }
-                    connectedCallback() {
-                        this.map = this.parentNode.map;
-                        if(this.map) { this.makeMarker(); }
-                    }
-                    makeMarker() {
-                        if(this.map) {
-                            let latlon = this.getAttribute("latlon").split(",").map(Number);
-                            let title = this.hasAttribute("title") ? this.getAttribute("title") : "";
-                            let popup = this.hasAttribute("popup") ? this.getAttribute("popup") : null;
-                            this.marker = L.marker(latlon,{title:title}).addTo(this.map);
-                            if(popup) this.marker.bindPopup("<h3>"+title+"</h3>"+popup);
-                        }
-                    }
-                }
+    </script>
+</body>
+</html>
