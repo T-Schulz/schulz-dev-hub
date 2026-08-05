@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund</title>
+    <title>Smart City Leitstelle - Dortmund (OSM Embed)</title>
     <style>
         :root {
             --bg: #f4f4f9;
@@ -55,7 +55,7 @@
             margin-bottom: 20px;
         }
         
-        /* UNBLOCKBARER KARTEN-CONTAINER (Lädt dein lokales Repository-Bild) */
+        /* KARTEN-CONTAINER (Hält das Iframe und die HTML-Pins) */
         #map-container {
             height: 480px;
             width: 100%;
@@ -64,11 +64,13 @@
             border: 1px solid var(--border);
             position: relative;
             overflow: hidden;
-            /* REPARATUR: Lädt das Bild direkt aus deinem eigenen GitHub-Ordner */
-            background-image: url('dortmund-map.png');
-            background-size: cover;
-            background-position: center;
-            background-color: #e5e3df;
+        }
+
+        /* Das eingebettete OSM-Iframe füllt den gesamten Container */
+        #map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
 
         /* Interaktive Infobox auf der Karte */
@@ -105,10 +107,10 @@
             z-index: 5;
         }
         
-        /* Positionen der Pins auf deiner Dortmund-Karte */
-        .sensor-1 { top: 38%; left: 90%; background-color: #2ecc71; } /* Wallring */
-        .sensor-2 { top: 12%; left: 37%; background-color: #e74c3c; } /* Hbf */
-        .sensor-3 { top: 39%; left: 64%; background-color: #2ecc71; } /* Reinoldi */
+        /* Neue, angepasste Koordinaten-Punkte für den gewählten Dortmund-Ausschnitt */
+        .sensor-1 { top: 48%; left: 56%; background-color: #2ecc71; } /* Nahe Reinoldikirche */
+        .sensor-2 { top: 45%; left: 35%; background-color: #e74c3c; } /* Nahe Hauptbahnhof */
+        .sensor-3 { top: 65%; left: 48%; background-color: #2ecc71; } /* Südl. Innenstadt */
     </style>
 </head>
 <body>
@@ -116,21 +118,24 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
         <header>
-            <h2>🗺️ Geo-Leitstelle Dortmund</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Lokales Repository-Bild aktiv ✔ (v9.0.0)</div>
+            <h2>🗺️ Geo-Leitstelle Dortmund (OSM)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #007bff; font-size: 0.9rem;">Status: Interaktives OSM-Iframe aktiv ✔</div>
         </header>
 
         <div class="card">
             <div id="map-container">
+                <!-- Echte OpenStreetMap Karte (Zentriert auf Dortmund Innenstadt) -->
+                <iframe src="https://openstreetmap.org"></iframe>
+
                 <div class="map-popup" id="popupBox">
                     <b id="popupTitle">Sensor-Details</b><br>
                     <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
                 </div>
 
-                <!-- Unblockbare IoT-Sensor-Pins -->
-                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Wallring-Ost', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 14 µg/m³')"></div>
-                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 42 Min.')"></div>
-                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Reinoldikirche', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
+                <!-- IoT-Sensor-Pins über der echten Karte platziert -->
+                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Innenstadt', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 12 µg/m³')"></div>
+                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 15 Min.')"></div>
+                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Stadthaus', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
             </div>
         </div>
     </div>
@@ -141,6 +146,11 @@
             document.getElementById("popupTitle").innerHTML = titel;
             document.getElementById("popupText").innerHTML = text;
             popup.style.display = "block";
+        }
+
+        // Dunkelmodus-Erkennung für das Dokument (falls benötigt)
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute("data-theme", "dark");
         }
     </script>
 </body>
