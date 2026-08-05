@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart City Leitstelle - TU Dortmund H-Bahn</title>
     
-    <!-- LOKALES CSS: Nutzt deine lokal gespeicherte CSS-Datei -->
+    <!-- LOKALES CSS -->
     <link rel="stylesheet" href="leaflet.css" />
     
     <style>
@@ -60,7 +60,7 @@
         }
         
         #map {
-            height: 520px; /* Etwas höher für die Nord-Süd-Ausdehnung des Campus */
+            height: 520px;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
@@ -82,6 +82,27 @@
             color: #e0e0e0;
             border-color: #555;
         }
+
+        /* NEU: Styling für die Koordinaten-Sammelbox unter der Karte */
+        .logger-title {
+            margin-top: 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .coord-logger {
+            width: 100%;
+            height: 120px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background-color: var(--bg);
+            color: var(--text);
+            box-sizing: border-box;
+            resize: vertical;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -90,15 +111,20 @@
         
         <header>
             <h2>🚟 ÖPNV-Leitstelle TU Dortmund (H-Bahn)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Campus-Netz aktiv ✔</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Rechtsklick zum Kopieren aktiv 📋</div>
         </header>
 
         <div class="card">
+            <!-- Die Karte -->
             <div id="map"></div>
+
+            <!-- NEU: Die interaktive Sammelbox für deine präzisen GPS-Daten -->
+            <div class="logger-title">📋 Präzise GPS-Sammelbox (Rechtsklick auf Karte zum Hinzufügen):</div>
+            <textarea class="coord-logger" id="coordLogger" readonly placeholder="Mache einen Rechtsklick auf die Karte, um exakte Koordinaten hier zu sammeln..."></textarea>
         </div>
     </div>
 
-    <!-- LOKALES SCRIPT: Nutzt deine lokal gespeicherte JS-Datei -->
+    <!-- LOKALES SCRIPT -->
     <script src="leaflet.js"></script>
     
     <script>
@@ -107,8 +133,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte zentrieren (Zentrum liegt genau zwischen Campus Nord und Campus Süd)
-            const map = L.map('map').setView([51.4895, 7.4095], 15);
+            // 1. Karte zentrieren (Über dem Campus der TU Dortmund)
+            const map = L.map('map').setView([51.4895, 7.4120], 15);
 
             // 2. OpenStreetMap Kacheln laden
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -124,40 +150,72 @@
                 options: { position: 'bottomright' },
                 onAdd: function() {
                     const container = L.DomUtil.create('div', 'coordinate-box');
-                    container.innerHTML = "Lat: 51.4895, Lon: 7.4095";
+                    container.innerHTML = "Lat: 51.4895, Lon: 7.4120";
                     map.on('mousemove', function(e) {
-                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(4)}, Lon: ${e.latlng.lng.toFixed(4)}`;
+                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(5)}, Lon: ${e.latlng.lng.toFixed(5)}`;
                     });
                     return container;
                 }
             });
             map.addControl(new CoordControl());
 
-            // 5. STRECKENVERLAUF ALS LINIE (Polyline) EINZEICHNEN
-            // Linie 1: Technologiezentrum - Campus Nord - S-Bahn
+
+            // ====================================================================
+            // NEU: INTERAKTIVES RECHTSKLICK-EVENT ZUM HOCHPRÄZISEN KOORDINATEN-LOGGEN
+            // ====================================================================
+            const loggerTextarea = document.getElementById('coordLogger');
+            
+            map.on('contextmenu', function(e) {
+                // Holt die ungerundeten, maximal präzisen 6-stelligen GPS-Werte
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                
+                // Formatierung als fertiges JavaScript-Array-Objekt für deinen Code
+                const formattedString = `[${lat}, ${lng}], // Klick-Punkt\n`;
+                
+                // In das Textfeld unten eintragen
+                loggerTextarea.value += formattedString;
+                
+                // Automatisch in die echte Windows/Mac-Zwischenablage kopieren
+                navigator.clipboard.writeText(`[${lat}, ${lng}]`).then(() => {
+                    // Temporärer visueller Indikator im Statusfeld
+                    const alterStatus = document.getElementById("mapStatus").innerHTML;
+                    document.getElementById("mapStatus").innerHTML = `Kopiert: [${lat}, ${lng}] ✔`;
+                    document.getElementById("mapStatus").style.color = "#007bff";
+                    setTimeout(() => {
+                        document.getElementById("mapStatus").innerHTML = alterStatus;
+                        document.getElementById("mapStatus").style.color = "#27ae60";
+                    }, 1500);
+                }).catch(err => {
+                    console.error('Fehler beim Kopieren in die Zwischenablage: ', err);
+                });
+            });
+            // ====================================================================
+
+
+            // 5. STRECKENVERLAUF ALS LINIE (Bisherige grobe Annäherung)
             const linie1Coords = [
-                [51.4938, 7.4038], // Technologiezentrum
-                [51.4925, 7.4124], // Campus Nord
-                [51.4912, 7.4150]  /* Universität S-Bahn */
+                [51.4938, 7.4038], 
+                [51.4925, 7.4124], 
+                [51.4912, 7.4150]
             ];
             L.polyline(linie1Coords, { color: '#ef5350', weight: 4, dashArray: '5, 5' }).addTo(map);
 
-            // Linie 2: Campus Nord - Campus Süd - Eichlinghofen
             const linie2Coords = [
-                [51.4925, 7.4124], // Campus Nord
-                [51.4883, 7.4116], // Campus Süd
-                [51.4842, 7.4052]  /* Eichlinghofen */
+                [51.4925, 7.4124], 
+                [51.4883, 7.4116], 
+                [51.4842, 7.4052]
             ];
             L.polyline(linie2Coords, { color: '#42a5f5', weight: 4, dashArray: '5, 5' }).addTo(map);
 
 
-            // 6. DIE 5 HALTESTELLEN ALS REALE SVG-MARKER
+            // 6. DIE 5 HALTESTELLEN ALS REALE SVG-MARKER (Bisherige grobe Annäherung)
             const stationen = [
-                { name: "🚟 H-Bahn Technologiezentrum", coords: [51.4938, 7.4038], info: "Linie 1<br>Takt: 10 Min.<br>Status: <b>Normalbetrieb</b>" },
-                { name: "🚟 H-Bahn Campus Nord", coords: [51.4925, 7.4124], info: "Zentraler Umstieg Knotenpunkt (Linie 1 & 2)<br>Status: <b>Normalbetrieb</b>" },
-                { name: "🚟 H-Bahn DO-Universität (S)", coords: [51.4912, 7.4150], info: "Anschluss an S-Bahn S1 Richtung Dortmund Hbf / Düsseldorf<br>Status: <b>Hohes Fahrgastaufkommen</b>" },
-                { name: "🚟 H-Bahn Campus Süd", coords: [51.4883, 7.4116], info: "Linie 2<br>Takt: 5 Min. (Pendelverkehr)<br>Status: <b>Normalbetrieb</b>" },
-                { name: "🚟 H-Bahn Eichlinghofen", coords: [51.4842, 7.4052], info: "Endstation Linie 2<br>Anschluss zu lokalen Buslinien<br>Status: <b>Normalbetrieb</b>" }
+                { name: "🚟 H-Bahn Technologiezentrum", coords: [51.4938, 7.4038], info: "Linie 1" },
+                { name: "🚟 H-Bahn Campus Nord", coords: [51.4925, 7.4124], info: "Zentraler Knotenpunkt" },
+                { name: "🚟 H-Bahn DO-Universität (S)", coords: [51.4912, 7.4150], info: "Anschluss an S1" },
+                { name: "🚟 H-Bahn Campus Süd", coords: [51.4883, 7.4116], info: "Linie 2" },
+                { name: "🚟 H-Bahn Eichlinghofen", coords: [51.4842, 7.4052], info: "Endstation Linie 2" }
             ];
 
             stationen.forEach(function(stat) {
