@@ -13,164 +13,58 @@
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
-        #map { height: 440px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
-        
-        /* Waggon Styling */
+        #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
         .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 18px; font-size: 12px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
-        
-        /* Sammelbox Styling */
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
-        .coord-logger { width: 100%; height: 80px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
-
-        /* Diagnose-Monitor */
-        .debug-console { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 2px solid #e74c3c; background-color: #fadbd8; color: #78281f; box-sizing: border-box; overflow-y: scroll; margin-top: 5px; }
-        [data-theme="dark"] .debug-console { background-color: #78281f; color: #fadbd8; }
+        .coord-logger { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
     </style>
-
-    <!-- Fehlerabfang-Monitor -->
-    <script>
-        window.addEventListener('error', function(e) {
-            const consoleBox = document.getElementById('debugConsole');
-            if (consoleBox) consoleBox.innerHTML += `❌ FEHLER: ${e.message}<br>`;
-            const status = document.getElementById("mapStatus");
-            if (status) { status.innerHTML = "System-Absturz! ❌"; status.style.color = "#e74c3c"; }
-        });
-    </script>
 </head>
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h2>🚟 ÖPNV-Leitstelle TU Dortmund (H-Bahn)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Initialisiere Leitstelle...</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Online ✔</div>
         </header>
         <div class="card">
-            <!-- Die Karte -->
             <div id="map"></div>
-            
-            <!-- Die Rechtsklick-Box -->
             <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte kopiert):</div>
             <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick fügt Daten ein..."></textarea>
-
-            <!-- Der Monitor zur Kontrolle -->
-            <div class="logger-title" style="color: #e74c3c;">🖥️ Live-Fehlermonitor:</div>
-            <div class="debug-console" id="debugConsole">Starte Triangulation...<br></div>
         </div>
     </div>
 
-    <!-- Skripte nacheinander laden -->
+    <!-- Scripte nacheinander laden -->
     <script src="leaflet.js"></script>
     <script src="hbahn-data.js"></script>
+    <script src="hbahn-engine.js"></script>
     
     <script>
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        // ====================================================================
-        // KORRIGIERTE INTERNE ANIMATIONS-ENGINE
-        // ====================================================================
-        
-        // REPARATUR: Jetzt werden die Arrays korrekt indexiert ([0] für Lat, [1] für Lng)
-        function interpolateCoords(p1, p2, fraction) {
-            const lat = p1[0] + (p2[0] - p1[0]) * fraction;
-            const lng = p1[1] + (p2[1] - p1[1]) * fraction;
-            return [lat, lng];
-        }
-
-        function getPositionOnRoute(coords, totalFraction) {
-            if (totalFraction <= 0) return coords[0];
-            if (totalFraction >= 1) return coords[coords.length - 1];
-            const numSegments = coords.length - 1;
-            const segmentFraction = 1 / numSegments;
-            const targetSegment = Math.floor(totalFraction / segmentFraction);
-            const remainder = (totalFraction % segmentFraction) / segmentFraction;
-            return interpolateCoords(coords[targetSegment], coords[targetSegment + 1], remainder);
-        }
-
-        function initWaggonAnimation(map, routeCoords) {
-            const hbahnIcon = L.divIcon({ className: 'hbahn-icon', html: '🚟', iconSize: [24, 24], iconAnchor: [12, 12] });
-            const marker = L.marker(routeCoords[0], { icon: hbahnIcon }).addTo(map);
-            marker.bindPopup("<b>H-Bahn Waggon (Fahrplan)</b>");
-
-            setInterval(() => {
-                const jetzt = new Date();
-                const sekunden = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
-                const fortschritt = sekunden % 600; // 10-Minuten-Takt
-                let aktuellePosition, text = "";
-
-                if (fortschritt >= 0 && fortschritt < 120) {
-                    aktuellePosition = getPositionOnRoute(routeCoords, fortschritt / 120);
-                    text = "Unterwegs nach: <b>Campus Süd</b>";
-                } else if (fortschritt >= 120 && fortschritt < 180) {
-                    aktuellePosition = routeCoords[routeCoords.length - 1];
-                    text = "Halt in <b>Campus Süd</b>";
-                } else if (fortschritt >= 180 && fortschritt < 300) {
-                    const rueckCoords = [...routeCoords].reverse();
-                    aktuellePosition = getPositionOnRoute(rueckCoords, (fortschritt - 180) / 120);
-                    text = "Unterwegs nach: <b>Eichlinghofen</b>";
-                } else {
-                    aktuellePosition = routeCoords[0];
-                    text = "Wartet in <b>Eichlinghofen</b>";
-                }
-                marker.setLatLng(aktuellePosition);
-                marker.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${text}`);
-            }, 500);
-        }
-
-        function initExpressDummyAnimation(map, routeCoords) {
-            const dummyIcon = L.divIcon({ className: 'hbahn-icon', html: '🚀', iconSize: [24, 24], iconAnchor: [12, 12] });
-            const marker = L.marker(routeCoords[0], { icon: dummyIcon }).addTo(map);
-            marker.bindPopup("<h3>🚀 Express-Test-Waggon</h3>");
-
-            let vorwaerts = true, fortschritt = 0;
-            setInterval(() => {
-                if (vorwaerts) { fortschritt += 0.005; if (fortschritt >= 1) vorwaerts = false; }
-                else { fortschritt -= 0.005; if (fortschritt <= 0) vorwaerts = true; }
-                
-                const pos = getPositionOnRoute(routeCoords, fortschritt);
-                marker.setLatLng(pos);
-                marker.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${vorwaerts ? "Campus Süd" : "Eichlinghofen"}</b>`);
-            }, 50); 
-        }
-
-        function activateGlobalRightClickLogger(map, textareaId) {
-            const logger = document.getElementById(textareaId);
-            if (!logger) return;
-            map.on('contextmenu', (e) => {
-                const chunk = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}], // Klick-Punkt\n`;
-                logger.value += chunk;
-                navigator.clipboard.writeText(`[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`);
-            });
-        }
-
-        // ====================================================================
-        // INITIALISIERUNG
-        // ====================================================================
         document.addEventListener("DOMContentLoaded", function() {
-            const consoleBox = document.getElementById('debugConsole');
-            
-            // Schutz-Checks vor dem Laden
-            if (typeof L === 'undefined') {
-                consoleBox.innerHTML += "❌ FEHLER: leaflet.js wurde nicht geladen!<br>";
-                return;
-            }
-            if (typeof hbahnData === 'undefined') {
-                consoleBox.innerHTML += "❌ FEHLER: hbahn-data.js wurde nicht geladen!<br>";
-                return;
-            }
-
-            // Karte laden
+            // 1. Karte laden und ausrichten
             const map = L.map('map').setView([51.4840, 7.4095], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
-            consoleBox.innerHTML += "ℹ️ Kacheln & Basis-System aktiv.<br>";
 
-            // Schienen zeichnen
+            // 2. Schienennetz aus hbahn-data.js zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
 
-            // Haltestellen zeichnen
+            // 3. Haltestellen zeichnen
             hbahnData.haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, { radius: 9, fillColor: "#00adb5", color: "#ffffff", weight: 2.5, opacity: 1, fillOpacity: 1 })
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
+
+            // 4. Triebwerke aus externer hbahn-engine.js starten
+            if (typeof window.initWaggonAnimation !== 'undefined') {
+                window.initWaggonAnimation(map, hbahnData.strecke1);        
+                window.initExpressDummyAnimation(map, hbahnData.strecke1);  
+                window.activateGlobalRightClickLogger(map, "meinKartenLogger");
+            }
+        });
+    </script>
+</body>
+</html>
