@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund (Vanilla JS)</title>
-    <!-- Wir binden Leaflet über verlässliche CDNs ein, die auch von GitHub akzeptiert werden -->
-    <link rel="stylesheet" href="https://cloudflare.com" />
+    <title>Smart City Leitstelle - Dortmund (100% Autark)</title>
+    
     <style>
         :root {
             --bg: #f4f4f9;
@@ -57,15 +56,59 @@
             margin-bottom: 20px;
         }
         
-        /* Absolut nativer Karten-Div ohne Shadow-DOM-Verschachtelung */
+        /* Karten-Container */
         #map {
             height: 480px;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            z-index: 1; /* Wichtig für Leaflet-Ebenen */
+            position: relative;
+            overflow: hidden;
+            /* Lädt sofort dein Bild aus dem Ordner */
+            background-image: url('dortmund-map.png');
+            background-size: cover;
+            background-position: center;
+            background-color: #e5e3df;
         }
+
+        /* Interaktive Infobox */
+        .map-popup {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-size: 0.85rem;
+            z-index: 100;
+            max-width: 260px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        [data-theme="dark"] .map-popup {
+            background: rgba(30, 30, 30, 0.95);
+            color: #e0e0e0;
+            border-color: #444;
+        }
+
+        /* Robuste CSS-Pins direkt auf dem Bild platziert */
+        .iot-marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 6px rgba(0,0,0,0.4);
+            cursor: pointer;
+            z-index: 90;
+        }
+        /* Exakte Koordinaten auf deiner dortmund-map.png */
+        .sensor-1 { top: 38%; left: 80%; background-color: #2ecc71; }
+        .sensor-2 { top: 12%; left: 37%; background-color: #e74c3c; }
+        .sensor-3 { top: 39%; left: 64%; background-color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -73,56 +116,39 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
         <header>
-            <h2>🗺️ Geo-Leitstelle Dortmund (Natives Leaflet)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Initialisiere... ⏳</div>
+            <h2>🗺️ Geo-Leitstelle Dortmund (Unblockbar)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Lokales Repository-Bild aktiv ✔</div>
         </header>
 
         <div class="card">
-            <!-- Das native Standard-Karten-Element -->
-            <div id="map"></div>
+            <div id="map">
+                <!-- Infobox für Klick-Details -->
+                <div class="map-popup" id="popupBox">
+                    <b id="popupTitle">Sensor-Details</b><br>
+                    <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
+                </div>
+                
+                <!-- Die drei IoT-Pins direkt auf dem Bild -->
+                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Innenstadt', 'Typ: senseBox Climate<br>Status: <b>AKTIV</b><br>Feinstaub: 14 µg/m³')"></div>
+                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Parkplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 42 Min.')"></div>
+                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Stadtgarten', 'Typ: IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Laden des Leaflet-Skripts über das hochverfügbare cdnjs -->
-    <script src="https://cloudflare.com"></script>
     <script>
         // Dunkelmodus-Erkennung für das Dashboard
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        document.addEventListener("DOMContentLoaded", function() {
-            try {
-                // 1. Karte initialisieren und auf Dortmund zentrieren (Breitengrad, Längengrad, Zoomstufe)
-                const map = L.map('map').setView([51.514, 7.464], 14);
-
-                // 2. OpenStreetMap-Kacheln hinzufügen
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>-Mitwirkende'
-                }).addTo(map);
-
-                // 3. IoT-Marker direkt mit GPS-Koordinaten auf die Karte setzen
-                const marker1 = L.marker([51.5146, 7.4675]).addTo(map);
-                marker1.bindPopup("<h3>🌱 Umweltstation Innenstadt</h3>Typ: senseBox Climate<br>Status: <b>AKTIV</b>");
-
-                const marker2 = L.marker([51.5176, 7.4590]).addTo(map);
-                marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>Status: <b style='color:#e74c3c'>BELEGT</b>");
-
-                const marker3 = L.marker([51.5133, 7.4612]).addTo(map);
-                marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>Status: <b>FREI</b>");
-
-                // Status-Update bei Erfolg
-                document.getElementById("mapStatus").innerHTML = "Status: Live-Karte geladen ✔";
-                document.getElementById("mapStatus").style.color = "#27ae60";
-
-            } catch (error) {
-                // Falls GitHub oder der Browser dennoch blockiert, fangen wir den Fehler ab
-                console.error("Leaflet-Ladefehler:", error);
-                document.getElementById("mapStatus").innerHTML = "Status: Durch Browser/GitHub blockiert ❌";
-                document.getElementById("mapStatus").style.color = "#e74c3c";
-            }
-        });
+        // Klick-Logik für die Popups
+        function zeigeDetails(titel, text) {
+            const popup = document.getElementById("popupBox");
+            document.getElementById("popupTitle").innerHTML = titel;
+            document.getElementById("popupText").innerHTML = text;
+            popup.style.display = "block";
+        }
     </script>
 </body>
 </html>
