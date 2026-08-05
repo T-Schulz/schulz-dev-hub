@@ -15,8 +15,22 @@
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
         
-        /* Waggon CSS Styling */
-        .hbahn-icon { background-color: #f39c12; border: 2px solid #ffffff; border-radius: 4px; box-shadow: 0 0 8px rgba(0,0,0,0.5); text-align: center; line-height: 20px; font-size: 14px; font-weight: bold; color: white; transition: all 0.1s linear; cursor: pointer; }
+        /* REPARATUR: Absolute Breiten- und Höhenerzwingung für das Leaflet-Waggon-Icon */
+        .hbahn-icon { 
+            width: 24px !important; 
+            height: 24px !important; 
+            background-color: #f39c12; 
+            border: 2px solid #ffffff; 
+            border-radius: 4px; 
+            box-shadow: 0 0 8px rgba(0,0,0,0.5); 
+            text-align: center; 
+            line-height: 20px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            color: white; 
+            display: block;
+            cursor: pointer; 
+        }
         
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
         .coord-logger { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
@@ -36,7 +50,7 @@
         </div>
     </div>
 
-    <!-- Skripte nacheinander laden -->
+    <!-- Skripte laden -->
     <script src="leaflet.js"></script>
     <script src="hbahn-data.js"></script>
     <script src="hbahn-engine.js"></script>
@@ -46,27 +60,78 @@
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
+        // ====================================================================
+        // AUTARKES FALLBACK (Sorgt dafür, dass die Animation IMMER läuft)
+        // ====================================================================
+        if (typeof window.initWaggonAnimation === 'undefined') {
+            console.log("Lokale Triebwerke aktiv.");
+            
+            window.interpolateCoords = function(p1, p2, fraction) {
+                return [p1 + (p2 - p1) * fraction, p1 + (p2 - p1) * fraction];
+            };
+
+            window.getPositionOnRoute = function(coords, totalFraction) {
+                if (totalFraction <= 0) return coords;
+                if (totalFraction >= 1) return coords[coords.length - 1];
+                const numSegments = coords.length - 1;
+                const segmentFraction = 1 / numSegments;
+                const targetSegment = Math.floor(totalFraction / segmentFraction);
+                const remainder = (totalFraction % segmentFraction) / segmentFraction;
+                return window.interpolateCoords(coords[targetSegment], coords[targetSegment + 1], remainder);
+            };
+
+            window.initWaggonAnimation = function(map, routeCoords) {
+                const icon = L.divIcon({ className: 'hbahn-icon', html: '🚟', iconSize:, iconAnchor: [12, 12] });
+                const marker = L.marker(routeCoords[0], { icon: icon }).addTo(map);
+                marker.bindPopup("<b>🚟 Fahrplan-Waggon</b>");
+                setInterval(() => {
+                    const sek = (new Date().getMinutes() * 60) + new Date().getSeconds();
+                    const prog = sek % 600;
+                    let pos = routeCoords[0];
+                    if (prog < 120) pos = window.getPositionOnRoute(routeCoords, prog / 120);
+                    else if (prog >= 120 && prog < 180) pos = routeCoords[routeCoords.length - 1];
+                    else if (prog >= 180 && prog < 300) pos = window.getPositionOnRoute([...routeCoords].reverse(), (prog - 180) / 120);
+                    marker.setLatLng(pos);
+                }, 500);
+            };
+
+            window.initExpressDummyAnimation = function(map, routeCoords) {
+                const icon = L.divIcon({ className: 'hbahn-icon', html: '🚀', iconSize:, iconAnchor: [12, 12] });
+                const marker = L.marker(routeCoords[0], { icon: icon }).addTo(map);
+                marker.bindPopup("<b>🚀 Express-Test-Waggon</b>");
+                let vor = true, pct = 0;
+                setInterval(() => {
+                    pct += vor ? 0.005 : -0.005;
+                    if (pct >= 1) vor = false; if (pct <= 0) vor = true;
+                    marker.setLatLng(window.getPositionOnRoute(routeCoords, pct));
+                }, 50);
+            };
+
+            window.activateGlobalRightClickLogger = function(map, textareaId) {
+                const logger = document.getElementById(textareaId);
+                map.on('contextmenu', (e) => {
+                    logger.value += `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}],\n`;
+                });
+            };
+        }
+
+        // Setup beim Laden der Seite
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden und auf Strecke 1 fokussieren
             const map = L.map('map').setView([51.4835, 7.4110], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // 2. Schienennetz aus hbahn-data.js zeichnen
+            // Strecke & Haltestellen zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
-
-            // 3. Haltestellen zeichnen
             hbahnData.haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, { radius: 9, fillColor: "#00adb5", color: "#ffffff", weight: 2.5, opacity: 1, fillOpacity: 1 })
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
 
-            // 4. Triebwerke und Tools aus externer hbahn-engine.js starten
-            if (typeof window.initWaggonAnimation !== 'undefined') {
-                window.initWaggonAnimation(map, hbahnData.strecke1);        
-                window.initExpressDummyAnimation(map, hbahnData.strecke1);  
-                window.activateGlobalRightClickLogger(map, "meinKartenLogger");
-            }
+            // Start der Triebwerke
+            window.initWaggonAnimation(map, hbahnData.strecke1);        
+            window.initExpressDummyAnimation(map, hbahnData.strecke1);  
+            window.activateGlobalRightClickLogger(map, "meinKartenLogger");
         });
     </script>
 </body>
