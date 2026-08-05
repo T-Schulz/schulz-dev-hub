@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund (OSM Embed)</title>
+    <title>Smart City Leitstelle - Dortmund (Karte 2 - Reale Daten)</title>
+    
+    <!-- LOKALES CSS: Nutzt deine lokal gespeicherte CSS-Datei -->
+    <link rel="stylesheet" href="leaflet.css" />
+    
     <style>
         :root {
             --bg: #f4f4f9;
@@ -55,62 +59,30 @@
             margin-bottom: 20px;
         }
         
-        /* KARTEN-CONTAINER (Hält das Iframe und die HTML-Pins) */
-        #map-container {
+        #map {
             height: 480px;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
+            z-index: 1;
         }
 
-        /* Das eingebettete OSM-Iframe füllt den gesamten Container */
-        #map-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        /* Interaktive Infobox auf der Karte */
-        .map-popup {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
+        /* Styling für die Koordinatenbox unten rechts auf der Karte */
+        .coordinate-box {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 4px 8px;
+            font-family: monospace;
+            font-size: 11px;
             color: #333;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            font-size: 0.85rem;
-            z-index: 10;
-            max-width: 260px;
+            border-radius: 4px;
             border: 1px solid #ccc;
-            display: none;
         }
-        [data-theme="dark"] .map-popup {
-            background: rgba(30, 30, 30, 0.95);
+        [data-theme="dark"] .coordinate-box {
+            background: rgba(30, 30, 30, 0.8);
             color: #e0e0e0;
-            border-color: #444;
+            border-color: #555;
         }
-
-        /* Kreisrunde, textfreie IoT-Marker */
-        .iot-marker {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            border-radius: 50% !important;
-            border: 2px solid white !important;
-            box-shadow: 0 0 6px rgba(0,0,0,0.4);
-            cursor: pointer;
-            z-index: 5;
-        }
-        
-        /* Neue, angepasste Koordinaten-Punkte für den gewählten Dortmund-Ausschnitt */
-        .sensor-1 { top: 48%; left: 56%; background-color: #2ecc71; } /* Nahe Reinoldikirche */
-        .sensor-2 { top: 45%; left: 35%; background-color: #e74c3c; } /* Nahe Hauptbahnhof */
-        .sensor-3 { top: 65%; left: 48%; background-color: #2ecc71; } /* Südl. Innenstadt */
     </style>
 </head>
 <body>
@@ -118,40 +90,63 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
         <header>
-            <h2>🗺️ Geo-Leitstelle Dortmund (OSM)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #007bff; font-size: 0.9rem;">Status: Interaktives OSM-Iframe aktiv ✔</div>
+            <h2>🗺️ Geo-Leitstelle Dortmund (Reale Sensordaten)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Live-Karte aktiv ✔</div>
         </header>
 
         <div class="card">
-            <div id="map-container">
-                <!-- Echte OpenStreetMap Karte (Zentriert auf Dortmund Innenstadt) -->
-                <iframe src="https://openstreetmap.org"></iframe>
-
-                <div class="map-popup" id="popupBox">
-                    <b id="popupTitle">Sensor-Details</b><br>
-                    <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
-                </div>
-
-                <!-- IoT-Sensor-Pins über der echten Karte platziert -->
-                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Innenstadt', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 12 µg/m³')"></div>
-                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 15 Min.')"></div>
-                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Stadthaus', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
-            </div>
+            <!-- Das interaktive Karten-Element -->
+            <div id="map"></div>
         </div>
     </div>
 
+    <!-- LOKALES SCRIPT: Nutzt deine lokal gespeicherte JS-Datei -->
+    <script src="leaflet.js"></script>
+    
     <script>
-        function zeigeDetails(titel, text) {
-            const popup = document.getElementById("popupBox");
-            document.getElementById("popupTitle").innerHTML = titel;
-            document.getElementById("popupText").innerHTML = text;
-            popup.style.display = "block";
-        }
-
-        // Dunkelmodus-Erkennung für das Dokument (falls benötigt)
+        // Dunkelmodus-Erkennung
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Karte initialisieren und exakt auf Dortmund zentrieren
+            const map = L.map('map').setView([51.5143, 7.4640], 14);
+
+            // 2. OpenStreetMap-Kacheln laden
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>'
+            }).addTo(map);
+
+            // 3. SKALA (MESSBALKEN) HINZUFÜGEN
+            // imperial: false entfernt die Meilen (Meilen-Skala ausblenden, nur Meter/Kilometer)
+            L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+            // 4. LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
+            const CoordControl = L.Control.extend({
+                options: { position: 'bottomright' },
+                onAdd: function() {
+                    const container = L.DomUtil.create('div', 'coordinate-box');
+                    container.innerHTML = "Lat: 51.5143, Lon: 7.4640";
+                    map.on('mousemove', function(e) {
+                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(4)}, Lon: ${e.latlng.lng.toFixed(4)}`;
+                    });
+                    return container;
+                }
+            });
+            map.addControl(new CoordControl());
+
+            // 5. REALE MARKER PLATZIEREN (Echte Standorte in Dortmund)
+            const marker1 = L.marker([51.5143, 7.4682]).addTo(map);
+            marker1.bindPopup("<h3>🌱 Umweltstation Reinoldikirche</h3>Typ: senseBox Climate<br>GPS: 51.5143, 7.4682<br>Status: <b>AKTIV</b>");
+
+            const marker2 = L.marker([51.5178, 7.4591]).addTo(map);
+            marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>GPS: 51.5178, 7.4591<br>Status: <b style='color:#e74c3c'>BELEGT</b>");
+
+            const marker3 = L.marker([51.5117, 7.4616]).addTo(map);
+            marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>GPS: 51.5117, 7.4616<br>Status: <b>FREI</b>");
+        });
     </script>
 </body>
 </html>
