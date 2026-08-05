@@ -83,7 +83,6 @@
             border-color: #555;
         }
 
-        /* NEU: Styling für die Koordinaten-Sammelbox unter der Karte */
         .logger-title {
             margin-top: 20px;
             font-size: 0.95rem;
@@ -111,15 +110,15 @@
         
         <header>
             <h2>🚟 ÖPNV-Leitstelle TU Dortmund (H-Bahn)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Rechtsklick zum Kopieren aktiv 📋</div>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Präzise Linienführung aktiv ✔</div>
         </header>
 
         <div class="card">
             <!-- Die Karte -->
             <div id="map"></div>
 
-            <!-- NEU: Die interaktive Sammelbox für deine präzisen GPS-Daten -->
-            <div class="logger-title">📋 Präzise GPS-Sammelbox (Rechtsklick auf Karte zum Hinzufügen):</div>
+            <!-- Die interaktive Sammelbox für weitere Strecken -->
+            <div class="logger-title">📋 Weitere GPS-Punkte sammeln (Rechtsklick auf Karte zum Hinzufügen):</div>
             <textarea class="coord-logger" id="coordLogger" readonly placeholder="Mache einen Rechtsklick auf die Karte, um exakte Koordinaten hier zu sammeln..."></textarea>
         </div>
     </div>
@@ -133,8 +132,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte zentrieren (Über dem Campus der TU Dortmund)
-            const map = L.map('map').setView([51.4895, 7.4120], 15);
+            // 1. Karte zentrieren (Fokus leicht nach Süden verschoben auf Strecke 1)
+            const map = L.map('map').setView([51.4880, 7.4110], 15);
 
             // 2. OpenStreetMap Kacheln laden
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -150,7 +149,7 @@
                 options: { position: 'bottomright' },
                 onAdd: function() {
                     const container = L.DomUtil.create('div', 'coordinate-box');
-                    container.innerHTML = "Lat: 51.4895, Lon: 7.4120";
+                    container.innerHTML = "Lat: 51.4880, Lon: 7.4110";
                     map.on('mousemove', function(e) {
                         container.innerHTML = `Lat: ${e.latlng.lat.toFixed(5)}, Lon: ${e.latlng.lng.toFixed(5)}`;
                     });
@@ -159,26 +158,15 @@
             });
             map.addControl(new CoordControl());
 
-
-            // ====================================================================
-            // NEU: INTERAKTIVES RECHTSKLICK-EVENT ZUM HOCHPRÄZISEN KOORDINATEN-LOGGEN
-            // ====================================================================
+            // 5. INTERAKTIVES RECHTSKLICK-EVENT FÜR WEITERE STRECKEN
             const loggerTextarea = document.getElementById('coordLogger');
-            
             map.on('contextmenu', function(e) {
-                // Holt die ungerundeten, maximal präzisen 6-stelligen GPS-Werte
                 const lat = e.latlng.lat.toFixed(6);
                 const lng = e.latlng.lng.toFixed(6);
-                
-                // Formatierung als fertiges JavaScript-Array-Objekt für deinen Code
                 const formattedString = `[${lat}, ${lng}], // Klick-Punkt\n`;
-                
-                // In das Textfeld unten eintragen
                 loggerTextarea.value += formattedString;
                 
-                // Automatisch in die echte Windows/Mac-Zwischenablage kopieren
                 navigator.clipboard.writeText(`[${lat}, ${lng}]`).then(() => {
-                    // Temporärer visueller Indikator im Statusfeld
                     const alterStatus = document.getElementById("mapStatus").innerHTML;
                     document.getElementById("mapStatus").innerHTML = `Kopiert: [${lat}, ${lng}] ✔`;
                     document.getElementById("mapStatus").style.color = "#007bff";
@@ -186,44 +174,66 @@
                         document.getElementById("mapStatus").innerHTML = alterStatus;
                         document.getElementById("mapStatus").style.color = "#27ae60";
                     }, 1500);
-                }).catch(err => {
-                    console.error('Fehler beim Kopieren in die Zwischenablage: ', err);
                 });
             });
+
+            // ====================================================================
+            // DEINE REALEN KOORDINATEN-DATEN
             // ====================================================================
 
-
-            // 5. STRECKENVERLAUF ALS LINIE (Bisherige grobe Annäherung)
-            const linie1Coords = [
-                [51.4938, 7.4038], 
-                [51.4925, 7.4124], 
-                [51.4912, 7.4150]
+            // 6. STRECKE 1: Eichlinghofen bis Campus Süd (Verbindungslinie)
+            const strecke1Coords = [
+                [51.481511, 7.409145], // Eichlinghofen Haltestelle
+                [51.481865, 7.409188], // Streckenpunkt11
+                [51.482420, 7.409242], // Streckenpunkt12
+                [51.482921, 7.409099], // Streckenpunkt13
+                [51.483589, 7.409303], // Streckenpunkt14
+                [51.484035, 7.409960], // Streckenpunkt15
+                [51.484563, 7.411489], // Streckenpunkt16
+                [51.484867, 7.412562], // Streckenpunkt17
+                [51.484982, 7.413144]  // Campus Süd Haltestelle
             ];
-            L.polyline(linie1Coords, { color: '#ef5350', weight: 4, dashArray: '5, 5' }).addTo(map);
+            // Rote Linie für die aktive Strecke 1
+            L.polyline(strecke1Coords, { color: '#ef5350', weight: 4, opacity: 0.8 }).addTo(map);
 
-            const linie2Coords = [
-                [51.4925, 7.4124], 
-                [51.4883, 7.4116], 
-                [51.4842, 7.4052]
+            // 7. RENDERING DER REINEN STRECKENPUNKTE (Kleinere graue Kreise)
+            const streckenPunkte = [
+                [51.481865, 7.409188], // SP 11
+                [51.482420, 7.409242], // SP 12
+                [51.482921, 7.409099], // SP 13
+                [51.483589, 7.409303], // SP 14
+                [51.484035, 7.409960], // SP 15
+                [51.484563, 7.411489], // SP 16
+                [51.484867, 7.412562]  // SP 17
             ];
-            L.polyline(linie2Coords, { color: '#42a5f5', weight: 4, dashArray: '5, 5' }).addTo(map);
+            streckenPunkte.forEach(function(coord, index) {
+                L.circleMarker(coord, {
+                    radius: 4,
+                    fillColor: "#78909c",
+                    color: "#ffffff",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 1
+                })
+                .addTo(map)
+                .bindPopup(`<b>Streckenpunkt 1.${index + 1}</b><br>GPS: ${coord[0]}, ${coord[1]}`);
+            });
 
-
-            // 6. DIE 5 HALTESTELLEN ALS REALE SVG-MARKER (Bisherige grobe Annäherung)
-            const stationen = [
-                { name: "🚟 H-Bahn Technologiezentrum", coords: [51.4938, 7.4038], info: "Linie 1" },
-                { name: "🚟 H-Bahn Campus Nord", coords: [51.4925, 7.4124], info: "Zentraler Knotenpunkt" },
-                { name: "🚟 H-Bahn DO-Universität (S)", coords: [51.4912, 7.4150], info: "Anschluss an S1" },
-                { name: "🚟 H-Bahn Campus Süd", coords: [51.4883, 7.4116], info: "Linie 2" },
-                { name: "🚟 H-Bahn Eichlinghofen", coords: [51.4842, 7.4052], info: "Endstation Linie 2" }
+            // 8. RENDERING DER 5 REALEN HALTESTELLEN (Größere cyan-farbene Kreise)
+            const haltestellen = [
+                { name: "🚟 H-Bahn Technologiezentrum", coords: [51.493336, 7.406970], info: "Endstation Nord-Ast" },
+                { name: "🚟 H-Bahn Campus Nord", coords: [51.492533, 7.415660], info: "Zentraler Hauptknotenpunkt" },
+                { name: "🚟 H-Bahn Dortmund Universität (S)", coords: [51.492321, 7.417398], info: "Anschluss S-Bahn S1" },
+                { name: "🚟 H-Bahn Campus Süd", coords: [51.484982, 7.413144], info: "Knotenpunkt Süd-Ast" },
+                { name: "🚟 H-Bahn Eichlinghofen", coords: [51.481511, 7.409145], info: "Endstation Süd-Ast" }
             ];
 
-            stationen.forEach(function(stat) {
+            haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, {
-                    radius: 7,
+                    radius: 9, // Größerer Radius für Haltestellen
                     fillColor: "#00adb5",
                     color: "#ffffff",
-                    weight: 2,
+                    weight: 2.5,
                     opacity: 1,
                     fillOpacity: 1
                 })
