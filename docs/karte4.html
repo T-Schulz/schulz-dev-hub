@@ -85,6 +85,14 @@
 
         .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
         .coord-logger { width: 100%; height: 100px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
+        
+        /* Styling für die Live-Wetter-Grafik im Pop-up */
+        .weather-banner {
+            width: 100%;
+            height: auto;
+            margin-top: 8px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -112,26 +120,6 @@
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        // Globale Funktion, die das Ergebnis der unblockbaren Wetter-API verarbeitet
-        window.processWeatherData = function(data) {
-            if (data && data.current_weather) {
-                const temp = data.current_weather.temperature.toFixed(1) + " °C";
-                const wind = data.current_weather.windspeed.toFixed(1) + " km/h";
-                
-                // Aktualisiere das Pop-up mit den echten Live-Werten aus Dortmund
-                window.umweltMarker.setPopupContent(`
-                    <h3>🌱 Echte Umweltstation (Live)</h3>
-                    <b>Ort:</b> Dortmund Reinoldikirche<br>
-                    <b>Temperatur:</b> ${temp}<br>
-                    <b>Windgeschwindigkeit:</b> ${wind}<br>
-                    <small style="color:#777;">Quelle: Open-Meteo API (Lokal freigegeben)</small>
-                `);
-                
-                document.getElementById("mapStatus").innerHTML = "Status: Reale IoT-Wetterdaten aktiv ✔";
-                document.getElementById("mapStatus").style.color = "#27ae60";
-            }
-        };
-
         document.addEventListener("DOMContentLoaded", function() {
             const map = L.map('map').setView([51.5143, 7.4640], 14);
 
@@ -156,31 +144,31 @@
             });
             map.addControl(new CoordControl());
 
-            // 1. Umwelt-Marker global im Fenster anlegen, damit die API-Funktion darauf zugreifen kann
-            window.umweltMarker = L.circleMarker([51.5143, 7.4682], {
+            // 1. Umwelt-Marker (Grün) mit unblockbarem Vektor-Wetter-Widget
+            const marker1 = L.circleMarker([51.5143, 7.4682], {
                 radius: 8, fillColor: "#2ecc71", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
-            window.umweltMarker.bindPopup("Lade Echtzeitdaten... ⏳");
+            
+            // Dieses Bild zieht Echtzeitdaten für Dortmund rein über ein unblockbares Grafik-Element (img)
+            const wetterPopupHtml = `
+                <h3>🌱 Umweltstation Reinoldikirche</h3>
+                <b>Typ:</b> IoT Wetter-Zentralstation<br>
+                <b>Aktuelles Dortmund-Wetter (Live):</b><br>
+                <img class="weather-banner" src="https://wttr.in" alt="Wetter Dortmund">
+            `;
+            marker1.bindPopup(wetterPopupHtml, { maxWidth: 300 });
 
-            // 2. Parkplatz-Marker (Statische Smart-City-Simulation)
+            // 2. Parkplatz-Marker
             const marker2 = L.circleMarker([51.5178, 7.4591], {
                 radius: 8, fillColor: "#e74c3c", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>Status: <b style='color:#e74c3c'>BELEGT</b><br>Dauer: 42 Min.");
 
-            // 3. E-Ladesäulen-Marker (Statische Smart-City-Simulation)
+            // 3. E-Ladesäulen-Marker
             const marker3 = L.circleMarker([51.5117, 7.4616], {
                 radius: 8, fillColor: "#3498db", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW");
-
-            // ====================================================================
-            // UNBLOCKBARER API-ABRUF VIA DYNAMISCHEM SCRIPT-TAG (Bypasst CORS/Iframes)
-            // ====================================================================
-            // Wir fragen die Koordinaten der Reinoldikirche (51.5143, 7.4682) ab
-            const apiScript = document.createElement("script");
-            apiScript.src = "https://open-meteo.com";
-            document.head.appendChild(apiScript);
 
             // Logger aktivieren
             activateGlobalRightClickLogger(map, "kartenLoggerVier");
