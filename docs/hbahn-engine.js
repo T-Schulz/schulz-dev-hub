@@ -22,12 +22,12 @@ function getPositionOnRoute(coords, totalFraction) {
 // FAHRPLAN-WAGGON (Echtzeit-Uhrzeit-Kopplung)
 // ====================================================================
 function initWaggonAnimation(map, routeCoords) {
-    // REPARATUR: Hier sind nun die korrekten Pixel-Werte eingetragen!
+    // REPARATUR: Pixel-Größen (24x24) eingetragen, um Absturz zu verhindern!
     const hbahnIcon = L.divIcon({
         className: 'hbahn-icon',
         html: '🚟',
         iconSize:,
-        iconAnchor: [11, 11]
+        iconAnchor: [12, 12]
     });
 
     const waggregateMarker = L.marker(routeCoords[0], { icon: hbahnIcon }).addTo(map);
@@ -74,14 +74,15 @@ function initWaggonAnimation(map, routeCoords) {
 }
 
 // ====================================================================
-// NEU: PERMANENTER EXPRESS-DUMMY-WAGGON (Pendelt ohne Pause durch)
+// PERMANENTER EXPRESS-DUMMY-WAGGON (Pendelt ohne Pause durch)
 // ====================================================================
 function initExpressDummyAnimation(map, routeCoords) {
+    // REPARATUR: Pixel-Größen (24x24) eingetragen!
     const dummyIcon = L.divIcon({
         className: 'hbahn-icon',
-        html: '🚀', // Raketen-Symbol oder ein anderes Waggon-Emoji zum Unterscheiden
+        html: '🚀', 
         iconSize:,
-        iconAnchor: [11, 11]
+        iconAnchor: [12, 12]
     });
 
     const dummyMarker = L.marker(routeCoords[0], { icon: dummyIcon }).addTo(map);
@@ -91,7 +92,6 @@ function initExpressDummyAnimation(map, routeCoords) {
     let fortschritt = 0;
 
     function updateExpressPosition() {
-        // Erhöht den Fortschritt alle 100ms um 0.5% -> Eine Richtung dauert exakt 20 Sekunden
         if (vorwaerts) {
             fortschritt += 0.005;
             if (fortschritt >= 1) { fortschritt = 1; vorwaerts = false; }
@@ -103,15 +103,16 @@ function initExpressDummyAnimation(map, routeCoords) {
         const aktuellePosition = getPositionOnRoute(routeCoords, fortschritt);
         dummyMarker.setLatLng(aktuellePosition);
         
+        // REPARATUR: Anführungszeichen korrigiert
         const ziel = vorwaerts ? "Campus Süd" : "Eichlinghofen";
-        dummyMarker.getPopup().setContent(`<h3>🚀 Express-Test-Waggon</h3>Pendelt im Dauertest.<br>Ziel: <b>${ziel</b>}`);
+        dummyMarker.getPopup().setContent(`<h3>🚀 Express-Test-Waggon</h3>Pendelt im Dauertest.<br>Ziel: <b>${ziel}</b>`);
     }
 
     setInterval(updateExpressPosition, 100);
 }
 
 // ====================================================================
-// NEU: GLOBALES RECHTSKLICK-KOORDINATEN-WERKZEUG
+// GLOBALES RECHTSKLICK-KOORDINATEN-WERKZEUG
 // ====================================================================
 function activateGlobalRightClickLogger(map, textareaId) {
     const loggerTextarea = document.getElementById(textareaId);

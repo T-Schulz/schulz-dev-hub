@@ -50,27 +50,20 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden und fokussieren
             const map = L.map('map').setView([51.4840, 7.4110], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // 2. Schiene zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
 
-            // 3. Haltestellen einzeichnen
             hbahnData.haltestellen.forEach(function(stat) {
                 L.circleMarker(stat.coords, { radius: 9, fillColor: "#00adb5", color: "#ffffff", weight: 2.5, opacity: 1, fillOpacity: 1 })
                  .addTo(map).bindPopup(`<h3>${stat.name}</h3>${stat.info}`);
             });
 
-            // ====================================================================
-            // DIE ENGINE-FUNKTIONEN STARTEN
-            // ====================================================================
-            initWaggonAnimation(map, hbahnData.strecke1);        // 1. Normaler Fahrplan-Waggon (🚟)
-            initExpressDummyAnimation(map, hbahnData.strecke1);  // 2. Schneller Express-Waggon (🚀)
-            
-            // 3. Das globale Rechtsklick-Kopiertool aktivieren (Übergabe der Textarea-ID)
+            // Funktionen starten
+            initWaggonAnimation(map, hbahnData.strecke1);        
+            initExpressDummyAnimation(map, hbahnData.strecke1);  
             activateGlobalRightClickLogger(map, "meinKartenLogger");
         });
     </script>
