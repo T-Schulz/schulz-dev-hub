@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund (DSGVO Leaflet)</title>
+    <title>Smart City Leitstelle - TU Dortmund H-Bahn</title>
+    
+    <!-- LOKALES CSS: Nutzt deine lokal gespeicherte CSS-Datei -->
+    <link rel="stylesheet" href="leaflet.css" />
+    
     <style>
         :root {
             --bg: #f4f4f9;
@@ -55,51 +59,28 @@
             margin-bottom: 20px;
         }
         
-        #map-container {
-            height: 480px;
+        #map {
+            height: 520px; /* Etwas höher für die Nord-Süd-Ausdehnung des Campus */
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            position: relative;
-            background-color: #e5e3df;
+            z-index: 1;
         }
 
-        osm-map {
-            width: 100%;
-            height: 100%;
-            display: none;
+        .coordinate-box {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 4px 8px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #333;
+            border-radius: 4px;
+            border: 1px solid #ccc;
         }
-
-        .privacy-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 30px;
-            box-sizing: border-box;
-            z-index: 20;
-        }
-        [data-theme="dark"] .privacy-overlay {
-            background-color: #252525;
-        }
-        .privacy-overlay p {
-            max-width: 450px;
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-        }
-        .btn-activate {
-            background-color: var(--accent);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
+        [data-theme="dark"] .coordinate-box {
+            background: rgba(30, 30, 30, 0.8);
+            color: #e0e0e0;
+            border-color: #555;
         }
     </style>
 </head>
@@ -108,37 +89,90 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
         <header>
-            <h2>🗺️ Geo-Leitstelle Dortmund (Leaflet DSGVO)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #e67e22; font-size: 0.9rem;">Status: Blockiert (Wartet auf Erlaubnis) 🔒</div>
+            <h2>🚟 ÖPNV-Leitstelle TU Dortmund (H-Bahn)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Campus-Netz aktiv ✔</div>
         </header>
 
         <div class="card">
-            <div id="map-container">
-                
-                <!-- Datenschutz-Box -->
-                <div class="privacy-overlay" id="privacyNotice">
-                    <h3>🔒 Datenschutz-Hinweis</h3>
-                    <p>Beim Aktivieren der Karte werden Daten vom Drittanbieter-Server (OpenStreetMap & unpkg.com) nachgeladen. Dabei wird Ihre IP-Adresse übertragen.</p>
-                    <button class="btn-activate" onclick="erlaubeUndLadeKarte()">Karte laden und Daten akzeptieren</button>
-                </div>
-
-                <!-- Custom-Element mit GPS-Koordinaten für Dortmund -->
-                <osm-map id="meineKarte" topleft="51.5210, 7.4520" bottomright="51.5070, 7.4780">
-                    <osm-marker latlon="51.5146, 7.4675" title="🌱 Umweltstation Innenstadt" popup="Typ: senseBox Climate<br>Status: ACTIVE"></osm-marker>
-                    <osm-marker latlon="51.5176, 7.4590" title="🚗 Parkplatz Hauptbahnhof" popup="Typ: LoRaWAN Park-Sensor<br>Status: BELEGT"></osm-marker>
-                    <osm-marker latlon="51.5133, 7.4612" title="🔋 E-Ladesäule Stadtgarten" popup="Typ: IoT-Wallbox<br>Status: FREI"></osm-marker>
-                </osm-map>
-
-            </div>
+            <div id="map"></div>
         </div>
     </div>
 
-    <!-- HIER werden die externe Logik-Datei und die Theme-Erkennung geladen -->
-    <script src="map-loader.js"></script>
+    <!-- LOKALES SCRIPT: Nutzt deine lokal gespeicherte JS-Datei -->
+    <script src="leaflet.js"></script>
+    
     <script>
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Karte zentrieren (Zentrum liegt genau zwischen Campus Nord und Campus Süd)
+            const map = L.map('map').setView([51.4895, 7.4095], 15);
+
+            // 2. OpenStreetMap Kacheln laden
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>'
+            }).addTo(map);
+
+            // 3. Maßstab hinzufügen
+            L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+            // 4. Koordinaten-Box für Mausbewegung
+            const CoordControl = L.Control.extend({
+                options: { position: 'bottomright' },
+                onAdd: function() {
+                    const container = L.DomUtil.create('div', 'coordinate-box');
+                    container.innerHTML = "Lat: 51.4895, Lon: 7.4095";
+                    map.on('mousemove', function(e) {
+                        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(4)}, Lon: ${e.latlng.lng.toFixed(4)}`;
+                    });
+                    return container;
+                }
+            });
+            map.addControl(new CoordControl());
+
+            // 5. STRECKENVERLAUF ALS LINIE (Polyline) EINZEICHNEN
+            // Linie 1: Technologiezentrum - Campus Nord - S-Bahn
+            const linie1Coords = [
+                [51.4938, 7.4038], // Technologiezentrum
+                [51.4925, 7.4124], // Campus Nord
+                [51.4912, 7.4150]  /* Universität S-Bahn */
+            ];
+            L.polyline(linie1Coords, { color: '#ef5350', weight: 4, dashArray: '5, 5' }).addTo(map);
+
+            // Linie 2: Campus Nord - Campus Süd - Eichlinghofen
+            const linie2Coords = [
+                [51.4925, 7.4124], // Campus Nord
+                [51.4883, 7.4116], // Campus Süd
+                [51.4842, 7.4052]  /* Eichlinghofen */
+            ];
+            L.polyline(linie2Coords, { color: '#42a5f5', weight: 4, dashArray: '5, 5' }).addTo(map);
+
+
+            // 6. DIE 5 HALTESTELLEN ALS REALE SVG-MARKER
+            const stationen = [
+                { name: "🚟 H-Bahn Technologiezentrum", coords: [51.4938, 7.4038], info: "Linie 1<br>Takt: 10 Min.<br>Status: <b>Normalbetrieb</b>" },
+                { name: "🚟 H-Bahn Campus Nord", coords: [51.4925, 7.4124], info: "Zentraler Umstieg Knotenpunkt (Linie 1 & 2)<br>Status: <b>Normalbetrieb</b>" },
+                { name: "🚟 H-Bahn DO-Universität (S)", coords: [51.4912, 7.4150], info: "Anschluss an S-Bahn S1 Richtung Dortmund Hbf / Düsseldorf<br>Status: <b>Hohes Fahrgastaufkommen</b>" },
+                { name: "🚟 H-Bahn Campus Süd", coords: [51.4883, 7.4116], info: "Linie 2<br>Takt: 5 Min. (Pendelverkehr)<br>Status: <b>Normalbetrieb</b>" },
+                { name: "🚟 H-Bahn Eichlinghofen", coords: [51.4842, 7.4052], info: "Endstation Linie 2<br>Anschluss zu lokalen Buslinien<br>Status: <b>Normalbetrieb</b>" }
+            ];
+
+            stationen.forEach(function(stat) {
+                L.circleMarker(stat.coords, {
+                    radius: 7,
+                    fillColor: "#00adb5",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1
+                })
+                .addTo(map)
+                .bindPopup(`<h3>${stat.name}</h3>${stat.info}<br><small>GPS: ${stat.coords[0]}, ${stat.coords[1]}</small>`);
+            });
+        });
     </script>
 </body>
 </html>
