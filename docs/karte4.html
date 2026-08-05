@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund (Hybrid-Sicher)</title>
+    <title>Smart City Leitstelle - Dortmund (Echtes Leaflet Lokal)</title>
     
-    <!-- LOKALES CSS: Lädt absolut unblockbar aus deinem eigenen Verzeichnis -->
-    <link rel="stylesheet" href="leaflet.css" onerror="this.removeAttribute('href'); console.log('CSS-Fallback aktiv.');" />
+    <!-- LOKALES CSS: Lädt absolut unblockbar direkt aus deinem eigenen Ordner -->
+    <link rel="stylesheet" href="leaflet.css" />
     
     <style>
         :root {
@@ -59,58 +59,15 @@
             margin-bottom: 20px;
         }
         
+        /* Das native Karten-Element */
         #map {
             height: 480px;
             width: 100%;
             margin-top: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
-            background-color: #e5e3df;
+            z-index: 1; /* Wichtig, damit Leaflet-Ebenen korrekt übereinander liegen */
         }
-
-        .fallback-active {
-            background-image: url('dortmund-map.png') !important;
-            background-size: cover !important;
-            background-position: center !important;
-        }
-
-        .map-popup {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            font-size: 0.85rem;
-            z-index: 100;
-            max-width: 260px;
-            border: 1px solid #ccc;
-            display: none;
-        }
-        [data-theme="dark"] .map-popup {
-            background: rgba(30, 30, 30, 0.95);
-            color: #e0e0e0;
-            border-color: #444;
-        }
-
-        .iot-marker {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 6px rgba(0,0,0,0.4);
-            cursor: pointer;
-            z-index: 90;
-            display: none;
-        }
-        .sensor-1 { top: 38%; left: 80%; background-color: #2ecc71; }
-        .sensor-2 { top: 12%; left: 37%; background-color: #e74c3c; }
-        .sensor-3 { top: 39%; left: 64%; background-color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -118,74 +75,56 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
         <header>
-            <h2>🗺️ Geo-Leitstelle Dortmund (Hybrid-Sicher)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #d35400; font-size: 0.9rem;">Prüfe System-Sicherheit... ⏳</div>
+            <h2>🗺️ Geo-Leitstelle Dortmund (Interaktiv & Lokal)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #d35400; font-size: 0.9rem;">Initialisiere Karte... ⏳</div>
         </header>
 
         <div class="card">
-            <div id="map">
-                <div class="map-popup" id="popupBox">
-                    <b id="popupTitle">Sensor-Details</b><br>
-                    <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
-                </div>
-                <div id="pin1" class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Innenstadt', 'Typ: senseBox Climate<br>Status: <b>AKTIV</b>')"></div>
-                <div id="pin2" class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Parkplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b>')"></div>
-                <div id="pin3" class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Stadtgarten', 'Typ: IoT-Wallbox<br>Status: <b>FREI</b>')"></div>
-            </div>
+            <!-- Das echte Karten-Element -->
+            <div id="map"></div>
         </div>
     </div>
 
-    <!-- LOKALES JS: Lädt absolut unblockbar aus deinem eigenen Verzeichnis -->
-    <script src="leaflet.js" crossorigin="anonymous"></script>
+    <!-- LOKALES SCRIPT: Lädt absolut unblockbar direkt aus deinem eigenen Ordner -->
+    <script src="leaflet.js"></script>
     
     <script>
+        // Dunkelmodus-Erkennung für das Dashboard
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        function zeigeDetails(titel, text) {
-            const popup = document.getElementById("popupBox");
-            document.getElementById("popupTitle").innerHTML = titel;
-            document.getElementById("popupText").innerHTML = text;
-            popup.style.display = "block";
-        }
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                // 1. Echte Karte initialisieren und auf Dortmund zentrieren
+                const map = L.map('map').setView([51.514, 7.464], 14);
 
-        window.onload = function() {
-            const mapElement = document.getElementById('map');
-            
-            if (typeof L !== 'undefined') {
-                try {
-                    const map = L.map('map').setView([51.514, 7.464], 14);
-                    const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 19,
-                        attribution: '&copy; OpenStreetMap'
-                    }).addTo(map);
+                // 2. OpenStreetMap-Kacheln direkt laden
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>'
+                }).addTo(map);
 
-                    L.marker([51.5146, 7.4675]).addTo(map).bindPopup("<h3>🌱 Umweltstation Innenstadt</h3>Typ: senseBox Climate");
-                    L.marker([51.5176, 7.4590]).addTo(map).bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor");
-                    L.marker([51.5133, 7.4612]).addTo(map).bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox");
+                // 3. Echte interaktive Leaflet-Pins mit echten GPS-Koordinaten setzen
+                const marker1 = L.marker([51.5146, 7.4675]).addTo(map);
+                marker1.bindPopup("<h3>🌱 Umweltstation Innenstadt</h3>Typ: senseBox Climate<br>Status: <b>AKTIV</b><br>Feinstaub: 14 µg/m³");
 
-                    document.getElementById("mapStatus").innerHTML = "Status: Interaktive Live-Karte aktiv ✔";
-                    document.getElementById("mapStatus").style.color = "#27ae60";
+                const marker2 = L.marker([51.5176, 7.4590]).addTo(map);
+                marker2.bindPopup("<h3>🚗 Parkplatz Hauptbahnhof</h3>Typ: LoRaWAN Park-Sensor<br>Status: <b style='color:#e74c3c'>BELEGT</b><br>Dauer: 42 Min.");
 
-                } catch (e) {
-                    aktiviereLokalesFallback("Kachel-Ladefehler (Netzwerk-Sperre)");
-                }
-            } else {
-                aktiviereLokalesFallback("Leaflet-Skript blockiert (CSP-Richtlinie)");
+                const marker3 = L.marker([51.5133, 7.4612]).addTo(map);
+                marker3.bindPopup("<h3>🔋 E-Ladesäule Stadtgarten</h3>Typ: IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW");
+
+                // Status auf Erfolg setzen
+                document.getElementById("mapStatus").innerHTML = "Status: Interaktive Live-Karte aktiv ✔";
+                document.getElementById("mapStatus").style.color = "#27ae60";
+
+            } catch (error) {
+                console.error("Leaflet-Ladefehler:", error);
+                document.getElementById("mapStatus").innerHTML = "Status: Kartenfehler oder Netzwerk-Sperre ❌";
+                document.getElementById("mapStatus").style.color = "#e74c3c";
             }
-
-            function aktiviereLokalesFallback(grund) {
-                console.warn("Fallback aktiviert wegen: " + grund);
-                mapElement.classList.add('fallback-active');
-                document.getElementById('pin1').style.display = 'block';
-                document.getElementById('pin2').style.display = 'block';
-                document.getElementById('pin3').style.display = 'block';
-
-                document.getElementById("mapStatus").innerHTML = `Status: Lokales Repository-Bild aktiv ✔ (${grund})`;
-                document.getElementById("mapStatus").style.color = "#2980b9";
-            }
-        };
+        });
     </script>
 </body>
 </html>
