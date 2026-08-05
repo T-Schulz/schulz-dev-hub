@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Leitstelle - Dortmund (Test Animation)</title>
+    <title>Smart City Leitstelle - Dortmund (Live-Zentrale)</title>
     <style>
         :root {
             --bg: #f4f4f9;
@@ -12,31 +12,50 @@
             --accent: #007bff;
             --border: #e0e0e0;
         }
+        [data-theme="dark"] {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --accent: #00adb5;
+            --border: #333333;
+        }
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg);
             color: var(--text);
+            margin: 0;
             padding: 40px 20px;
         }
         .container { max-width: 800px; margin: 0 auto; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
         .btn-link {
             display: inline-block;
             background-color: #333;
-            color: white;
+            color: white !important;
             padding: 10px 20px;
             border-radius: 6px;
             text-decoration: none;
             font-weight: bold;
             margin-bottom: 15px;
+            cursor: pointer;
+            border: none;
         }
         .card {
             background: var(--card-bg);
             padding: 25px;
             border-radius: 12px;
             border: 1px solid var(--border);
+            margin-bottom: 20px;
         }
         
-        /* Das statische Hintergrundbild aus Karte 1 */
+        /* UNBLOCKBARER KARTEN-CONTAINER (Lädt das lokale Bild) */
         #map-container {
             height: 480px;
             width: 100%;
@@ -51,19 +70,60 @@
             background-color: #e5e3df;
         }
 
-        /* Das Test-Symbol: Ein rotes Quadrat, das wir per Code verschieben */
+        /* Interaktive Infobox auf der Karte */
+        .map-popup {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-size: 0.85rem;
+            z-index: 100;
+            max-width: 260px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        [data-theme="dark"] .map-popup {
+            background: rgba(30, 30, 30, 0.95);
+            color: #e0e0e0;
+            border-color: #444;
+        }
+
+        /* Kreisrunde, textfreie IoT-Marker (Statisch) */
+        .iot-marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 6px rgba(0,0,0,0.4);
+            cursor: pointer;
+            z-index: 5;
+        }
+        .sensor-1 { top: 38%; left: 90%; background-color: #2ecc71; } /* Wallring */
+        .sensor-2 { top: 12%; left: 37%; background-color: #e74c3c; } /* Hbf */
+        .sensor-3 { top: 39%; left: 64%; background-color: #2ecc71; } /* Reinoldi */
+
+        /* ANIMIERTES ELEMENT: Der H-Bahn Test-Waggon */
         #test-waggon {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #e74c3c;
+            width: 22px;
+            height: 22px;
+            background-color: #f39c12;
             border: 2px solid white;
             border-radius: 4px;
-            box-shadow: 0 0 6px rgba(0,0,0,0.4);
-            top: 40%;    /* Feste vertikale Position */
-            left: 10%;   /* Startposition links */
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            top: 40%;
+            left: 10%;
             z-index: 50;
-            transition: left 0.1s linear; /* Sorgt für flüssiges Gleiten */
+            cursor: pointer;
+            text-align: center;
+            line-height: 22px;
+            font-size: 14px;
+            transition: left 0.05s linear;
         }
     </style>
 </head>
@@ -71,45 +131,60 @@
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         
+        <header>
+            <h2>🗺️ Geo-Leitstelle Dortmund (Hybrid-Modus)</h2>
+            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Live-Animation & Pins aktiv ✔</div>
+        </header>
+
         <div class="card">
-            <h2>🗺️ Geo-Leitstelle Dortmund (Animations-Testlauf)</h2>
-            <p id="animStatus" style="font-weight: bold; color: #007bff;">Status: Bereite Triebwagen vor... ⏳</p>
-            
             <div id="map-container">
-                <!-- Das animierte Element -->
-                <div id="test-waggon"></div>
+                <!-- Infobox für Klick-Details -->
+                <div class="map-popup" id="popupBox">
+                    <b id="popupTitle">Sensor-Details</b><br>
+                    <span id="popupText">Klicken Sie auf einen Pin für Live-Daten.</span>
+                </div>
+
+                <!-- Unblockbare IoT-Sensor-Pins -->
+                <div class="iot-marker sensor-1" onclick="zeigeDetails('🌱 Umweltstation Wallring-Ost', 'Typ: senseBox Climate<br>Status: <b>AKTIV (Frei)</b><br>Feinstaub: 14 µg/m³')"></div>
+                <div class="iot-marker sensor-2" onclick="zeigeDetails('🚗 Stellplatz Hauptbahnhof', 'Typ: LoRaWAN Park-Sensor<br>Status: <b style=\'color:#e74c3c\'>BELEGT</b><br>Dauer: 42 Min.')"></div>
+                <div class="iot-marker sensor-3" onclick="zeigeDetails('🔋 E-Ladesäule Reinoldikirche', 'Typ: Mennekes IoT-Wallbox<br>Status: <b>FREI</b><br>Leistung: 22 kW')"></div>
+
+                <!-- Der animierte H-Bahn-Waggon -->
+                <div id="test-waggon" onclick="zeigeDetails('🚟 H-Bahn Testbetrieb', 'Typ: Siemens SIPEM Waggon<br>Status: <b>Geschwindigkeitstest</b><br>Position: Dynamisch')">🚟</div>
             </div>
         </div>
     </div>
 
     <script>
+        // Dunkelmodus-Erkennung
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute("data-theme", "dark");
+        }
+
+        // Klick-Logik für Infoboxen (gilt für Pins UND den Waggon)
+        function zeigeDetails(titel, text) {
+            const popup = document.getElementById("popupBox");
+            document.getElementById("popupTitle").innerHTML = titel;
+            document.getElementById("popupText").innerHTML = text;
+            popup.style.display = "block";
+        }
+
+        // Animations-Logik für den Waggon
         document.addEventListener("DOMContentLoaded", function() {
             const waggon = document.getElementById("test-waggon");
-            const statusText = document.getElementById("animStatus");
-            
-            let positionX = 10; // Start bei 10% von links
+            let positionX = 10;
             let richtungVorwaerts = true;
 
-            statusText.innerHTML = "Status: Animation läuft aktiv! 🟢";
-            statusText.style.color = "#27ae60";
-
-            // Intervall startet: Alle 50 Millisekunden wird die Position aktualisiert
             setInterval(function() {
                 if (richtungVorwaerts) {
-                    positionX += 0.5; // Bewege nach rechts
-                    if (positionX >= 85) {
-                        richtungVorwaerts = false; // Am rechten Rand umkehren
-                    }
+                    positionX += 0.3;
+                    if (positionX >= 85) { richtungVorwaerts = false; }
                 } else {
-                    positionX -= 0.5; // Bewege nach links
-                    if (positionX <= 10) {
-                        richtungVorwaerts = true; // Am linken Rand umkehren
-                    }
+                    positionX -= 0.3;
+                    if (positionX <= 10) { richtungVorwaerts = true; }
                 }
-
-                // Die neue Prozent-Position direkt an das CSS-Element übergeben
                 waggon.style.left = positionX + "%";
-            }, 50);
+            }, 30);
         });
     </script>
 </body>
