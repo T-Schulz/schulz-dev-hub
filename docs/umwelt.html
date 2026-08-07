@@ -183,7 +183,8 @@
                         document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
                     }
 
-                    var updateTime = friedensplatz.fields.timestamp || new Date().toISOString();
+                    // KORREKTUR: Absicherung des Zeitstempels gegen unvollständige Sensordaten
+                    var updateTime = (friedensplatz && friedensplatz.fields && friedensplatz.fields.timestamp) ? friedensplatz.fields.timestamp : new Date().toISOString();
                     document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(updateTime).toLocaleString("de-DE");
                 } else {
                     throw new Error("Das result-Array der Stadt Dortmund ist leer.");
