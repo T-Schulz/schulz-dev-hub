@@ -70,7 +70,7 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
-            <span class="version-tag">v2.7-mit Proxy-frei via JSONP</span>
+            <span class="version-tag">v2.6-mit 2 proxy</span>
         </header>
 
         <!-- FENSTER 1: Sensor-Daten Visualisierung -->
@@ -106,7 +106,7 @@
             <div id="debug-log" class="debug-console">Verbindungsvorbereitung läuft...</div>
         </div>
     </div>
-    <!-- API-Logik via ausfallsicherem JSONP-Verfahren -->
+    <!-- API-Logik und Datenverarbeitung -->
     <script>
         const logContainer = document.getElementById('debug-log');
         const badge = document.getElementById('status-badge');
@@ -122,101 +122,108 @@
             badge.className = 'status-badge ' + className;
         }
 
-        // 1. DIESE FUNKTION EMPFÄNGT DIE DATEN DIREKT VON DER STADT DORTMUND
-        window.handleDortmundData = function(data) {
-            logDebug("JSONP-Callback ausgeloest. Daten direkt von der Stadt empfangen!");
-            
-            try {
-                if (data && data.results && data.results.length > 0) {
-                    logDebug("Datensaetze im Array: " + data.results.length);
-                    setStatusBadge("Verbunden", "status-success");
-
-                    // Suche nach Friedensplatz (prüft flache Struktur der v2.1 API)
-                    var friedensplatz = data.results.find(function(r) {
-                        return r.de_bezeichnung === "Friedensplatz";
-                    }) || data.results[0];
-
-                    var ausweichStation = data.results.find(function(r) {
-                        return r.de_bezeichnung !== friedensplatz.de_bezeichnung;
-                    }) || data.results[1];
-
-                    var calcWidth = function(temp) {
-                        var min = -10, max = 40;
-                        return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
-                    };
-
-                    // Station 1 befüllen
-                    if (friedensplatz) {
-                        var name1 = friedensplatz.de_bezeichnung || "Friedensplatz";
-                        var t1 = parseFloat(friedensplatz.lufttemperatur);
-                        
-                        if (!isNaN(t1)) {
-                            logDebug("Station 1 geladen: " + name1 + " (" + t1 + " °C)");
-                            document.getElementById("station1-label").innerText = "📍 " + name1;
-                            document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
-                            document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
-                        }
-                    }
-
-                    // Station 2 befüllen
-                    if (ausweichStation) {
-                        var name2 = ausweichStation.de_bezeichnung || "Ausweichstation";
-                        var t2 = parseFloat(ausweichStation.lufttemperatur);
-                        
-                        if (!isNaN(t2)) {
-                            logDebug("Station 2 geladen: " + name2 + " (" + t2 + " °C)");
-                            document.getElementById("station2-label").innerText = "📍 " + name2;
-                            document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
-                            document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
-                        }
-                    }
-
-                    var updateTime = friedensplatz.timestamp || new Date().toISOString();
-                    document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(updateTime).toLocaleString("de-DE");
-                
-                } else {
-                    throw new Error("Erhaltenes JSONP-Array ist leer.");
-                }
-            } catch (error) {
-                logDebug("Auswertungsfehler: " + error.message, "error");
-                setStatusBadge("Daten-Fehler", "status-error");
-            }
-            
-            // Aufräumen: Altes Skript-Tag nach erfolgreicher Ladung entfernen
-            var oldScript = document.getElementById('jsonp-trigger');
-            if (oldScript) oldScript.remove();
-        };
-
-        // 2. FUNKTION ERZEUGT DEN DIREKTEN JSONP-LINK (AUFGETEILT GEGEN ABSCHNEIDEN)
-        function fetchTemperatureData() {
-            logContainer.textContent = "--- Neuer Abfragezyklus (JSONP) gestartet ---";
-            setStatusBadge("Kontaktiere Dortmund...", "status-loading");
-
-            // Wir stueckeln die URL, damit dein Editor nichts abschneidet
-            var t1 = "https://open-data.dortmund.de";
-            var t2 = "/api/explore/v2.1/catalog/datasets/";
-            var t3 = "klimasensoren-aktuelle-messungen/records";
-            // Der Parameter 'callback' zwingt den Server zum JSONP-Modus!
-            var t4 = "?limit=15&callback=handleDortmundData"; 
-            
-            var jsonpUrl = t1 + t2 + t3 + t4;
-            logDebug("Lade Daten direkt via Script-Injektion...");
-
-            // Dynamisches Erzeugen eines <script> Elements im HTML-Kopf
-            var script = document.createElement('script');
-            script.id = 'jsonp-trigger';
-            script.src = jsonpUrl;
-            
-            // Fehlerbehandlung falls der städtische Server komplett offline ist
-            script.onerror = function() {
-                logDebug("Skript-Injektion fehlgeschlagen. Dortmund-Server offline?", "error");
-                setStatusBadge("Server Offline", "status-error");
-            };
-
-            document.head.appendChild(script);
+        function setStatusBadge(text, className) {
+            badge.innerText = text;
+            badge.className = `status-badge ${className}`;
         }
 
-        // Sofort ausführen und alle 5 Minuten wiederholen
+        async function fetchTemperatureData() {
+            logContainer.textContent = "--- Neuer Abfragezyklus gestartet ---";
+            setStatusBadge("Lade Daten...", "status-loading");
+            
+            // Korrekte API-Quelle (Klimamessnetz Dortmund)
+            // var rawApiUrl = "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/klimasensoren-aktuelle-messungen/records?limit=15";
+            var teil1 = "https://open-data.";
+            var teil2 = "dortmund.de/api/explore/v2.1/";
+            var teil3 = "catalog/datasets/klimasensoren-aktuelle-messungen/";
+            var teil4 = "records?limit=15";
+
+            var rawApiUrl = teil1 + teil2 + teil3 + teil4;  
+
+            // Korrekter Proxy-Pfad mit API-Parameter-Zuweisung
+            // var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(rawApiUrl);
+            // var proxyBasis = "https://api.allorigins.win/get?url=";
+            // var proxyUrl = proxyBasis + encodeURIComponent(rawApiUrl);
+
+            // REPARATUR: Super-flache Proxy-Kette ohne riskante Sonderzeichen
+            var p1 = "https://api.allorigins.win/get?url=";
+            var p2 = "https://api.corsproxy.io/get?url=";
+            var proxies = [p1, p2];
+
+            var success = false;
+            var data = null;
+
+            for (var i = 0; i < proxies.length; i++) {
+                var currentProxy = proxies[i];
+                var testUrl = currentProxy + encodeURIComponent(rawApiUrl);
+                
+                logDebug("Versuche Verbindung ueber Proxy [" + (i + 1) + "]...");
+
+                try {
+                    var response = await fetch(testUrl);
+                    logDebug("HTTP-Status von Proxy [" + (i + 1) + "]: " + response.status);
+                    
+                    if (response.ok) {
+                        var wrapperData = await response.json();
+                        if (wrapperData && wrapperData.contents) {
+                            data = JSON.parse(wrapperData.contents);
+                        } else {
+                            data = wrapperData;
+                        }
+                        logDebug("Erfolgreich Daten empfangen und dekodiert.");
+                        success = true;
+                        break;
+                    }
+                } catch (e) {
+                    logDebug("Proxy [" + (i + 1) + "] fehlgeschlagen: " + e.message, "error");
+                }
+            }
+
+            if (!success || !data) {
+                logDebug("Alle CORS-Proxys blockiert oder offline.", "error");
+                setStatusBadge("Proxy Fehler", "status-error");
+                return;
+            }
+
+            // ANALYSE DER STRUKTUR UND FELDNAMEN
+            try {
+                if (data.results && data.results.length > 0) {
+                    logDebug("Datensaetze im Array: " + data.results.length);
+                    setStatusBadge("Analysiere...", "status-loading");
+
+                    // Nimm den allerersten Sensor zur Analyse
+                    var ersterSensor = data.results[0];
+                    
+                    logDebug("--- LIVE STRUKTUR-ANALYSE ---");
+                    logDebug("Ebene 1 verfuegbare Felder: " + Object.keys(ersterSensor).join(", "));
+                    
+                    if (ersterSensor.fields) {
+                        logDebug("Ebene 2 (.fields) verfuegbare Felder: " + Object.keys(ersterSensor.fields).join(", "));
+                    }
+
+                    // Flexible Daten-Extraktion (Test auf verschiedene bekannte Feldnamen)
+                    var target = ersterSensor.fields || ersterSensor;
+                    var stationName = target.de_bezeichnung || target.station_name || target.name || "Unbekannt";
+                    
+                    // Wir testen alle denkbaren Temperatur-Feldnamen der Dortmund-API
+                    var tempWert = target.lufttemperatur || target.temperatur || target.temp || target.temperature || target.value;
+
+                    logDebug("Testauslesung von Station [" + stationName + "]: Erhaltene Temperatur = " + tempWert);
+                    
+                    // Setze Textfelder provisorisch auf den gefundenen Namen
+                    document.getElementById("station1-label").innerText = "📍 " + stationName;
+                    document.getElementById("station1-val").innerText = tempWert !== undefined ? tempWert + " ?" : "Nicht gefunden";
+                    
+                    setStatusBadge("Struktur analysiert", "status-success");
+                } else {
+                    throw new Error("Dortmund API liefert leeres 'results'-Array.");
+                }
+            } catch (error) {
+                logDebug("Analyse-Fehler: " + error.message, "error");
+                setStatusBadge("Fehler", "status-error");
+            }
+        }
+
         fetchTemperatureData();
         setInterval(fetchTemperatureData, 300000);
     </script>
