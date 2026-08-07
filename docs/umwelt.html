@@ -40,7 +40,7 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
-            <span class="version-tag">v3.0- yaml workflow</span>
+            <span class="version-tag">v3.5- yaml workflow</span>
         </header>
 
         <div class="card">
@@ -74,6 +74,7 @@
         </div>
     </div>
 
+    <!-- API-Logik und Datenverarbeitung v3.5 -->
     <script>
         const logContainer = document.getElementById('debug-log');
         const badge = document.getElementById('status-badge');
@@ -81,26 +82,33 @@
         function logDebug(msg, type = 'info') {
             const symbols = { error: '❌ ', success: '✅ ', info: 'ℹ️ ' };
             logContainer.textContent += '\n[' + new Date().toLocaleTimeString() + '] ' + (symbols[type] || '') + msg;
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         async function fetchTemperatureData() {
-            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v3.0) ---";
+            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v3.5) ---";
             badge.innerText = "Lade Cache...";
             badge.className = "status-badge status-loading";
 
             try {
-                // Lädt die vom GitHub-Workflow gespeicherte Datei im selben Ordner
-                var response = await fetch("dortmund-iot.json");
-                logDebug("Lokale Datei erfolgreich abgefragt. Status: " + response.status);
+                // KORREKTUR: Springt eine Ebene hoeher (../), um die Datei im Hauptordner zu finden
+                var response = await fetch("../dortmund-iot.json");
+                logDebug("Datei-Abfrage abgesetzt. HTTP-Status: " + response.status);
                 
-                if (!response.ok) throw new Error("Datei noch nicht generiert oder fehlt.");
+                if (!response.ok) throw new Error("Datei fehlt auf dem Server. Status: " + response.status);
                 var data = await response.json();
 
-                if (data && data.results && data.results.length > 0) {
+                // Erkennung ob fälschlicherweise HTML (Redirect) statt JSON geladen wurde
+                if (data.results === undefined) {
+                    throw new Error("Erhaltene Datei ist kein gueltiges JSON der Dortmund-API. Workflow prüfen!");
+                }
+
+                if (data.results && data.results.length > 0) {
                     logDebug("Gueltiges JSON extrahiert. Eintraege: " + data.results.length);
                     badge.innerText = "Verbunden";
                     badge.className = "status-badge status-success";
 
+                    // Suchen der Stationen im flachen v2.1 JSON-Format
                     var friedensplatz = data.results.find(function(r) { return r.de_bezeichnung === "Friedensplatz"; }) || data.results[0];
                     var ausweichStation = data.results.find(function(r) { return r.de_bezeichnung !== friedensplatz.de_bezeichnung; }) || data.results[1];
 
@@ -127,12 +135,13 @@
 
                     var updateTime = friedensplatz.timestamp || new Date().toISOString();
                     document.getElementById("iot-timestamp").innerText = "Letzter Sync: " + new Date(updateTime).toLocaleString("de-DE");
+                } else {
+                    throw new Error("Das result-Array der Stadt Dortmund ist leer.");
                 }
             } catch (error) {
                 logDebug("Fehler: " + error.message, "error");
-                badge.innerText = "Warte auf Workflow";
+                badge.innerText = "Synchronisations-Fehler";
                 badge.className = "status-badge status-error";
-                logDebug("Hinweis: Starte den GitHub-Workflow einmal manuell unter 'Actions' im Repository, um die Datendatei initial anzulegen.");
             }
         }
 
@@ -140,5 +149,4 @@
         setInterval(fetchTemperatureData, 60000);
     </script>
 </body>
-
 </html>

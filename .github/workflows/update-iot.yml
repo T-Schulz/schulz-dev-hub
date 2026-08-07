@@ -8,40 +8,22 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
-  sync-and-deploy:
+  sync-data:
     runs-on: ubuntu-latest
     steps:
       - name: Code auschecken
         uses: actions/checkout@v5
 
-      # KORREKTUR: Sucht deine HTML-Dateien und speichert die JSON exakt im selben Ordner ab
-      - name: Daten von Stadt Dortmund laden und im HTML-Ordner ablegen
+      # KORREKTUR: Nutzt -L (Folge Weiterleitungen) und die exakte Opendatasoft v2.1 API URL
+      - name: Daten von Stadt Dortmund laden
         run: |
-          # Findet den Ordner, in dem deine Umwelt-Webseite liegt
-          TARGET_DIR=$(dirname $(find . -name "index.html" | head -n 1))
-          echo "HTML-Verzeichnis gefunden: $TARGET_DIR"
-          
-          # Speichert die JSON-Datei direkt in diesem Ordner ab
-          curl -s "https://dortmund.de" > "$TARGET_DIR/dortmund-iot.json"
+          curl -L -s "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/klimasensoren-aktuelle-messungen/records?limit=15" > dortmund-iot.json
 
       - name: Aenderungen committen und pushen
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add .
-          git diff --quiet && git diff --cached --quiet || (git commit -m "Update Dortmund IoT Live Data in HTML folder" && git push)
-
-      - name: Pages-Infrastruktur konfigurieren
-        uses: actions/configure-pages@v5
-
-      - name: Ordner-Inhalt als Artefakt packen
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.' # Verpackt das gesamte Repository inklusive aller Unterordner
-
-      - name: Webseite live veroeffentlichen
-        uses: actions/deploy-pages@v5
+          git add dortmund-iot.json
+          git diff --quiet && git diff --cached --quiet || (git commit -m "Update Dortmund IoT Live Data" && git push)
