@@ -125,62 +125,74 @@
             logContainer.textContent = "--- Neuer Abfragezyklus gestartet ---";
             setStatusBadge("Lade Daten...", "status-loading");
             
-            const rawApiUrl = 'https://dortmund.de';
-            const proxyUrl = `https://allorigins.win{encodeURIComponent(rawApiUrl)}`;
-            
-            logDebug(`Kontaktiere CORS-Bypass Proxy...`);
+            // Korrekte API-Quelle (Klimamessnetz Dortmund)
+            // var rawApiUrl = "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/klimasensoren-aktuelle-messungen/records?limit=15";
+            var teil1 = "https://open-data.";
+            var teil2 = "dortmund.de/api/explore/v2.1/";
+            var teil3 = "catalog/datasets/klimasensoren-aktuelle-messungen/";
+            var teil4 = "records?limit=15";
+
+            var rawApiUrl = teil1 + teil2 + teil3 + teil4;  
+
+            // Korrekter Proxy-Pfad mit API-Parameter-Zuweisung
+            // var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(rawApiUrl);
+            var proxyBasis = "https://api.allorigins.win/get?url=";
+
+            var proxyUrl = proxyBasis + encodeURIComponent(rawApiUrl);
+
+            logDebug("Rufe Proxy auf: " + proxyUrl);
             
             try {
-                const response = await fetch(proxyUrl);
-                logDebug(`HTTP-Antwort-Status: ${response.status}`);
-                if (!response.ok) throw new Error(`Netzwerk meldet: ${response.statusText}`);
+                var response = await fetch(proxyUrl);
+                logDebug("HTTP-Status vom Proxy: " + response.status);
+                if (!response.ok) throw new Error("Netzwerkfehler: " + response.statusText);
                 
-                const wrapperData = await response.json();
-                logDebug(`Proxy-Wrapper aufgelöst. Entpacke rohe JSON-Daten...`);
+                var wrapperData = await response.json();
+                logDebug("Proxy-Wrapper erhalten. Parse Daten...");
                 
-                const data = JSON.parse(wrapperData.contents);
-                logDebug(`JSON erfolgreich geparst.`);
+                var data = JSON.parse(wrapperData.contents);
+                logDebug("JSON erfolgreich dekodiert.");
 
-                if (data.results && data.results.length > 0) {
-                    logDebug(`Datensätze im Array gefunden: ${data.results.length}`);
+            if (data.results && data.results.length > 0) {
+                    logDebug("Datensaetze gefunden: " + data.results.length);
                     setStatusBadge("Verbunden", "status-success");
 
-                    const friedensplatz = data.results.find(r => r.fields && r.fields.de_bezeichnung === "Friedensplatz") || data.results[0];
-                    const ausweichStation = data.results.find(r => r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung) || data.results[1];
+                    var friedensplatz = data.results.find(function(r) { return r.fields && r.fields.de_bezeichnung === "Friedensplatz"; }) || data.results[0];
+                    var ausweichStation = data.results.find(function(r) { return r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung; }) || data.results[1];
 
-                    const calcWidth = (temp) => {
-                        const min = -10, max = 40;
+                    var calcWidth = function(temp) {
+                        var min = -10, max = 40;
                         return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
                     };
 
                     if (friedensplatz && friedensplatz.fields) {
-                        const f = friedensplatz.fields;
-                        const t1 = parseFloat(f.lufttemperatur);
-                        logDebug(`Station 1 identifiziert: ${f.de_bezeichnung} (${t1} °C)`);
-                        document.getElementById('station1-label').innerText = `📍 ${f.de_bezeichnung}`;
-                        document.getElementById('station1-bar').style.width = `${calcWidth(t1)}%`;
-                        document.getElementById('station1-val').innerText = `${t1.toFixed(1)} °C`;
+                        var f = friedensplatz.fields;
+                        var t1 = parseFloat(f.lufttemperatur);
+                        logDebug("Station 1: " + f.de_bezeichnung + " (" + t1 + " °C)");
+                        document.getElementById("station1-label").innerText = "📍 " + f.de_bezeichnung;
+                        document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
+                        document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
                     }
 
                     if (ausweichStation && ausweichStation.fields) {
-                        const v = ausweichStation.fields;
-                        const t2 = parseFloat(v.lufttemperatur);
-                        logDebug(`Station 2 identifiziert: ${v.de_bezeichnung} (${t2} °C)`);
-                        document.getElementById('station2-label').innerText = `📍 ${v.de_bezeichnung}`;
-                        document.getElementById('station2-bar').style.width = `${calcWidth(t2)}%`;
-                        document.getElementById('station2-val').innerText = `${t2.toFixed(1)} °C`;
+                        var v = ausweichStation.fields;
+                        var t2 = parseFloat(v.lufttemperatur);
+                        logDebug("Station 2: " + v.de_bezeichnung + " (" + t2 + " °C)");
+                        document.getElementById("station2-label").innerText = "📍 " + v.de_bezeichnung;
+                        document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
+                        document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
                     }
 
-                    const updateTime = friedensplatz.fields.timestamp || new Date().toISOString();
-                    document.getElementById('iot-timestamp').innerText = `Messung vom: ${new Date(updateTime).toLocaleString('de-DE')}`;
+                    var updateTime = friedensplatz.fields.timestamp || new Date().toISOString();
+                    document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(updateTime).toLocaleString("de-DE");
                 } else {
-                    throw new Error("Das empfangene 'results'-Array ist leer.");
+                    throw new Error("Das result-Array der Stadt Dortmund ist leer.");
                 }
             } catch (error) {
-                logDebug(`Verarbeitungsfehler: ${error.message}`, 'error');
-                setStatusBadge("CORS / API Blockiert", "status-error");
-                document.getElementById('station1-val').innerText = 'API Offline';
-                document.getElementById('station2-val').innerText = 'API Offline';
+                logDebug("Verarbeitungsfehler: " + error.message, "error");
+                setStatusBadge("Verbindungsfehler", "status-error");
+                document.getElementById("station1-val").innerText = "Fehler";
+                document.getElementById("station2-val").innerText = "Fehler";
             }
         }
 
