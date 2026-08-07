@@ -70,7 +70,7 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
-            <span class="version-tag">v2.7-mit Proxy-frei via JSONP</span>
+            <span class="version-tag">v2.8 JSONP</span>
         </header>
 
         <!-- FENSTER 1: Sensor-Daten Visualisierung -->
@@ -106,7 +106,7 @@
             <div id="debug-log" class="debug-console">Verbindungsvorbereitung läuft...</div>
         </div>
     </div>
-    <!-- API-Logik via ausfallsicherem JSONP-Verfahren -->
+    <!-- API-Logik via ausfallsicherem JSONP-Verfahren (v2.8) -->
     <script>
         const logContainer = document.getElementById('debug-log');
         const badge = document.getElementById('status-badge');
@@ -122,22 +122,24 @@
             badge.className = 'status-badge ' + className;
         }
 
-        // 1. DIESE FUNKTION EMPFÄNGT DIE DATEN DIREKT VON DER STADT DORTMUND
         window.handleDortmundData = function(data) {
-            logDebug("JSONP-Callback ausgeloest. Daten direkt von der Stadt empfangen!");
+            logDebug("JSONP-Callback erfolgreich verarbeitet.");
             
             try {
                 if (data && data.results && data.results.length > 0) {
-                    logDebug("Datensaetze im Array: " + data.results.length);
+                    logDebug("Datensaetze gefunden: " + data.results.length);
                     setStatusBadge("Verbunden", "status-success");
 
-                    // Suche nach Friedensplatz (prüft flache Struktur der v2.1 API)
+                    // KORREKTUR v2.8: Suche in der verschachtelten .record.fields-Ebene von v2.1 JSONP
                     var friedensplatz = data.results.find(function(r) {
-                        return r.de_bezeichnung === "Friedensplatz";
+                        var f = r.record && r.record.fields;
+                        return f && f.de_bezeichnung === "Friedensplatz";
                     }) || data.results[0];
 
                     var ausweichStation = data.results.find(function(r) {
-                        return r.de_bezeichnung !== friedensplatz.de_bezeichnung;
+                        var f = r.record && r.record.fields;
+                        var targetF = friedensplatz.record && friedensplatz.record.fields;
+                        return f && targetF && f.de_bezeichnung !== targetF.de_bezeichnung;
                     }) || data.results[1];
 
                     var calcWidth = function(temp) {
@@ -145,7 +147,83 @@
                         return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
                     };
 
-                    // Station 1 befüllen
+                    // Station 1 (Friedensplatz) rendern
+                    if (friedensplatz && friedensplatz.record && friedensplatz.record.fields) {
+                        var f1 = friedensplatz.record.fields;
+                        var name1 = f1.de_bezeichnung || "Friedensplatz";
+                        var t1 = parseFloat(f1.lufttemperatur);
+                        
+                        if (!isNaN(t1)) {
+                            logDebug("Station 1: " + name1 + " (" + t1 + " °C)");
+                            document.getElementById("station1-label").innerText = "📍 " + name1;
+                            document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
+                            document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Fehler: Temperatur fuer Station 1 ist keine Zahl.", "error");
+                        }
+                    }
+
+                    // Station 2 (Ausweichstation) rendern
+                    if (ausweichStation && ausweichStation.record && ausweichStation.record.fields) {
+                        var f2 = ausweichStation.record.fields;
+                        var name2 = f2.de_bezeichnung || "Ausweichstation";
+                        var t2 = parseFloat(f2.lufttemperatur);
+                        
+                        if (!isNaN(t2)) {
+                            logDebug("Station 2: " + name2 + " (" + t2 + " °C)");
+                            document.getElementById("station2-label").innerText = "📍 " + name2;
+                            document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
+                            document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Fehler: Temperatur fuer Station 2 ist keine Zahl.", "error");
+                        }
+                    }
+
+                    // Zeitstempel setzen
+                    var timeSource = (friedensplatz.record && friedensplatz.record.fields) ? friedensplatz.record.fields.timestamp : new Date().toISOString();
+                    document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(timeSource).toLocaleString("de-DE");
+                
+                } else {
+                    throw new Error("Städtische JSONP-Antwort besitzt keine 'results'.");
+                }
+            } catch (error) {
+                logDebug("Struktur-Fehler: " + error.message, "error");
+                setStatusBadge("Daten-Fehler", "status-error");
+            }
+            
+            var oldScript = document.getElementById('jsonp-trigger');
+            if (oldScript) oldScript.remove();
+        };
+
+        function fetchTemperatureData() {
+            logContainer.textContent = "--- Neuer Abfragezyklus (JSONP) gestartet ---";
+            setStatusBadge("Kontaktiere Dortmund...", "status-loading");
+
+            var t1 = "https://dortmund.de";
+            var t2 = "/api/explore/v2.1/catalog/datasets/";
+            var t3 = "klimasensoren-aktuelle-messungen/records";
+            var t4 = "?limit=15&callback=handleDortmundData"; 
+            
+            var jsonpUrl = t1 + t2 + t3 + t4;
+            logDebug("Skript-Injektion wird abgefeuert...");
+
+            var script = document.createElement('script');
+            script.id = 'jsonp-trigger';
+            script.src = jsonpUrl;
+            
+            script.onerror = function() {
+                logDebug("Injektionsfehler. Server nicht erreichbar.", "error");
+                setStatusBadge("Server Offline", "status-error");
+            };
+
+            document.head.appendChild(script);
+        }
+
+        fetchTemperatureData();
+        setInterval(fetchTemperatureData, 300000);
+    </script>
+</body>
+</html>                // Station 1 befüllen
                     if (friedensplatz) {
                         var name1 = friedensplatz.de_bezeichnung || "Friedensplatz";
                         var t1 = parseFloat(friedensplatz.lufttemperatur);
