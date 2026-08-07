@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umwelt & Wetter - Dev-Hub v2.4</title>
+    <style>
+        :root {
+            --bg: #f4f4f9;
+            --text: #333;
+            --card-bg: #ffffff;
+            --accent: #27ae60;
+            --border: #e0e0e0;
+            --temp-accent: #e67e22;
+            --debug-bg: #2d3748;
+            --debug-text: #edf2f7;
+        }
+        [data-theme="dark"] {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --accent: #2ecc71;
+            --border: #333333;
+            --temp-accent: #f39c12;
+            --debug-bg: #1a202c;
+            --debug-text: #a0aec0;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        .version-tag { font-size: 0.8rem; background: var(--border); padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+        .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
+        
+        /* CSS-Diagramm */
+        .chart-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .bar-group { display: flex; flex-direction: column; gap: 5px; }
+        .bar-label { font-size: 0.9rem; font-weight: bold; }
+        .bar-wrapper { width: 100%; background: #eee; border-radius: 4px; height: 24px; overflow: hidden; position: relative; }
+        [data-theme="dark"] .bar-wrapper { background: #333; }
+        .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s ease-in-out; }
+        .bar-fill.temp { background: var(--temp-accent); }
+        .bar-value { position: absolute; right: 10px; top: 2px; font-size: 0.85rem; font-weight: bold; color: #333; }
+        [data-theme="dark"] .bar-value { color: #fff; }
+        .timestamp { font-size: 0.8rem; color: #777; margin-top: 15px; text-align: right; }
+
+        /* Optimierter Debugger-Bereich */
+        .debug-console {
+            background-color: var(--debug-bg);
+            color: var(--debug-text);
+            font-family: "Courier New", Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre;
+            max-height: none;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-top: 15px;
+        }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .status-loading { background: #d69e2e; color: #fff; }
+        .status-success { background: #38a169; color: #fff; }
+        .status-error { background: #e53e3e; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
+        <header>
+            <h1>🌱 Umwelt & Wetter</h1>
+            <span class="version-tag">v2.8 JSONP</span>
+        </header>
+
+        <!-- FENSTER 1: Sensor-Daten Visualisierung -->
+        <div class="card">
+            <h2>🌡️ Live-Temperatur (Klimamessnetz Dortmund)</h2>
+            <p>Aktuelle Messwerte städtischer IoT-Sensoren, bezogen via Open Data Dortmund.</p>
+            
+            <div class="chart-container">
+                <div class="bar-group">
+                    <div class="bar-label" id="station1-label">📍 Dortmund Friedensplatz</div>
+                    <div class="bar-wrapper">
+                        <div class="bar-fill temp" id="station1-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="station1-val">Warte auf API...</div>
+                    </div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar-label" id="station2-label">📍 Dortmund (Ausweichstation)</div>
+                    <div class="bar-wrapper">
+                        <div class="bar-fill temp" id="station2-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="station2-val">Warte auf API...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="timestamp" id="iot-timestamp">Stand: --:--:--</div>
+        </div>
+
+        <!-- FENSTER 2: System-Debugging & Protokoll -->
+        <div class="card" style="border-color: #cbd5e0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">🛠️ Live-API Diagnosekonsole</h3>
+                <div id="status-badge" class="status-badge status-loading">Initialisiere...</div>
+            </div>
+            <div id="debug-log" class="debug-console">Verbindungsvorbereitung läuft...</div>
+        </div>
+    </div>
+    <!-- API-Logik via ausfallsicherem JSONP-Verfahren (v2.8) -->
+    <script>
+        const logContainer = document.getElementById('debug-log');
+        const badge = document.getElementById('status-badge');
+
+        function logDebug(msg, type = 'info') {
+            const symbols = { error: '❌ ', success: '✅ ', info: 'ℹ️ ' };
+            logContainer.textContent += '\n[' + new Date().toLocaleTimeString() + '] ' + (symbols[type] || '') + msg;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function setStatusBadge(text, className) {
+            badge.innerText = text;
+            badge.className = 'status-badge ' + className;
+        }
+
+        window.handleDortmundData = function(data) {
+            logDebug("JSONP-Callback erfolgreich verarbeitet.");
+            
+            try {
+                if (data && data.results && data.results.length > 0) {
+                    logDebug("Datensaetze gefunden: " + data.results.length);
+                    setStatusBadge("Verbunden", "status-success");
+
+                    // KORREKTUR v2.8: Suche in der verschachtelten .record.fields-Ebene von v2.1 JSONP
+                    var friedensplatz = data.results.find(function(r) {
+                        var f = r.record && r.record.fields;
+                        return f && f.de_bezeichnung === "Friedensplatz";
+                    }) || data.results[0];
+
+                    var ausweichStation = data.results.find(function(r) {
+                        var f = r.record && r.record.fields;
+                        var targetF = friedensplatz.record && friedensplatz.record.fields;
+                        return f && targetF && f.de_bezeichnung !== targetF.de_bezeichnung;
+                    }) || data.results[1];
+
+                    var calcWidth = function(temp) {
+                        var min = -10, max = 40;
+                        return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
+                    };
+
+                    // Station 1 (Friedensplatz) rendern
+                    if (friedensplatz && friedensplatz.record && friedensplatz.record.fields) {
+                        var f1 = friedensplatz.record.fields;
+                        var name1 = f1.de_bezeichnung || "Friedensplatz";
+                        var t1 = parseFloat(f1.lufttemperatur);
+                        
+                        if (!isNaN(t1)) {
+                            logDebug("Station 1: " + name1 + " (" + t1 + " °C)");
+                            document.getElementById("station1-label").innerText = "📍 " + name1;
+                            document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
+                            document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Fehler: Temperatur fuer Station 1 ist keine Zahl.", "error");
+                        }
+                    }
+
+                    // Station 2 (Ausweichstation) rendern
+                    if (ausweichStation && ausweichStation.record && ausweichStation.record.fields) {
+                        var f2 = ausweichStation.record.fields;
+                        var name2 = f2.de_bezeichnung || "Ausweichstation";
+                        var t2 = parseFloat(f2.lufttemperatur);
+                        
+                        if (!isNaN(t2)) {
+                            logDebug("Station 2: " + name2 + " (" + t2 + " °C)");
+                            document.getElementById("station2-label").innerText = "📍 " + name2;
+                            document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
+                            document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Fehler: Temperatur fuer Station 2 ist keine Zahl.", "error");
+                        }
+                    }
+
+                    // Zeitstempel setzen
+                    var timeSource = (friedensplatz.record && friedensplatz.record.fields) ? friedensplatz.record.fields.timestamp : new Date().toISOString();
+                    document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(timeSource).toLocaleString("de-DE");
+                
+                } else {
+                    throw new Error("Städtische JSONP-Antwort besitzt keine 'results'.");
+                }
+            } catch (error) {
+                logDebug("Struktur-Fehler: " + error.message, "error");
+                setStatusBadge("Daten-Fehler", "status-error");
+            }
+            
+            var oldScript = document.getElementById('jsonp-trigger');
+            if (oldScript) oldScript.remove();
+        };
+
+        function fetchTemperatureData() {
+            logContainer.textContent = "--- Neuer Abfragezyklus (JSONP) gestartet ---";
+            setStatusBadge("Kontaktiere Dortmund...", "status-loading");
+
+            var t1 = "https://dortmund.de";
+            var t2 = "/api/explore/v2.1/catalog/datasets/";
+            var t3 = "klimasensoren-aktuelle-messungen/records";
+            var t4 = "?limit=15&callback=handleDortmundData"; 
+            
+            var jsonpUrl = t1 + t2 + t3 + t4;
+            logDebug("Skript-Injektion wird abgefeuert...");
+
+            var script = document.createElement('script');
+            script.id = 'jsonp-trigger';
+            script.src = jsonpUrl;
+            
+            script.onerror = function() {
+                logDebug("Injektionsfehler. Server nicht erreichbar.", "error");
+                setStatusBadge("Server Offline", "status-error");
+            };
+
+            document.head.appendChild(script);
+        }
+
+        fetchTemperatureData();
+        setInterval(fetchTemperatureData, 300000);
+    </script>
+</body>
+</html>
