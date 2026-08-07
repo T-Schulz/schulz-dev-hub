@@ -90,7 +90,7 @@
 
             try {
                 // Lädt die vom GitHub-Workflow gespeicherte Datei im selben Ordner
-                var response = await fetch("./dortmund-iot.json");
+                var response = await fetch("dortmund-iot.json");
                 logDebug("Lokale Datei erfolgreich abgefragt. Status: " + response.status);
                 
                 if (!response.ok) throw new Error("Datei noch nicht generiert oder fehlt.");
