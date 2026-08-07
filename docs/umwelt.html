@@ -106,14 +106,20 @@
             <div id="debug-log" class="debug-console">Verbindungsvorbereitung läuft...</div>
         </div>
     </div>
-        <!-- API-Logik und Datenverarbeitung -->
+    <!-- API-Logik und Datenverarbeitung -->
     <script>
         const logContainer = document.getElementById('debug-log');
         const badge = document.getElementById('status-badge');
 
         function logDebug(msg, type = 'info') {
             const symbols = { error: '❌ ', success: '✅ ', info: 'ℹ️ ' };
-            logContainer.textContent += `\n[${new Date().toLocaleTimeString()}] ${symbols[type] || ''}${msg}`;
+            logContainer.textContent += '\n[' + new Date().toLocaleTimeString() + '] ' + (symbols[type] || '') + msg;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function setStatusBadge(text, className) {
+            badge.innerText = text;
+            badge.className = 'status-badge ' + className;
         }
 
         function setStatusBadge(text, className) {
@@ -136,85 +142,85 @@
 
             // Korrekter Proxy-Pfad mit API-Parameter-Zuweisung
             // var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(rawApiUrl);
-            var proxyBasis = "https://api.allorigins.win/get?url=";
+            // var proxyBasis = "https://api.allorigins.win/get?url=";
+            // var proxyUrl = proxyBasis + encodeURIComponent(rawApiUrl);
 
-            var proxyUrl = proxyBasis + encodeURIComponent(rawApiUrl);
+            // REPARATUR: Super-flache Proxy-Kette ohne riskante Sonderzeichen
+            var p1 = "https://api.allorigins.win/get?url=";
+            var p2 = "https://api.corsproxy.io/get?url=";
+            var proxies = [p1, p2];
 
-            logDebug("Rufe Proxy auf: " + proxyUrl);
-            
+            var success = false;
+            var data = null;
+
+            for (var i = 0; i < proxies.length; i++) {
+                var currentProxy = proxies[i];
+                var testUrl = currentProxy + encodeURIComponent(rawApiUrl);
+                
+                logDebug("Versuche Verbindung ueber Proxy [" + (i + 1) + "]...");
+
+                try {
+                    var response = await fetch(testUrl);
+                    logDebug("HTTP-Status von Proxy [" + (i + 1) + "]: " + response.status);
+                    
+                    if (response.ok) {
+                        var wrapperData = await response.json();
+                        if (wrapperData && wrapperData.contents) {
+                            data = JSON.parse(wrapperData.contents);
+                        } else {
+                            data = wrapperData;
+                        }
+                        logDebug("Erfolgreich Daten empfangen und dekodiert.");
+                        success = true;
+                        break;
+                    }
+                } catch (e) {
+                    logDebug("Proxy [" + (i + 1) + "] fehlgeschlagen: " + e.message, "error");
+                }
+            }
+
+            if (!success || !data) {
+                logDebug("Alle CORS-Proxys blockiert oder offline.", "error");
+                setStatusBadge("Proxy Fehler", "status-error");
+                return;
+            }
+
+            // ANALYSE DER STRUKTUR UND FELDNAMEN
             try {
-                var response = await fetch(proxyUrl);
-                logDebug("HTTP-Status vom Proxy: " + response.status);
-                if (!response.ok) throw new Error("Netzwerkfehler: " + response.statusText);
-                
-                var wrapperData = await response.json();
-                logDebug("Proxy-Wrapper erhalten. Parse Daten...");
-                
-                var data = JSON.parse(wrapperData.contents);
-                logDebug("JSON erfolgreich dekodiert.");
+                if (data.results && data.results.length > 0) {
+                    logDebug("Datensaetze im Array: " + data.results.length);
+                    setStatusBadge("Analysiere...", "status-loading");
 
-            if (data.results && data.results.length > 0) {
-                    logDebug("Datensaetze gefunden: " + data.results.length);
-                    setStatusBadge("Verbunden", "status-success");
-
-                    // Flexible Suche: Unterstützt flache und verschachtelte Strukturen der Dortmund-API
-                    var friedensplatz = data.results.find(function(r) {
-                        var name = r.de_bezeichnung || (r.fields && r.fields.de_bezeichnung);
-                        return name === "Friedensplatz";
-                    }) || data.results[0];
-
-                    var ausweichStation = data.results.find(function(r) {
-                        var name = r.de_bezeichnung || (r.fields && r.fields.de_bezeichnung);
-                        var fName = friedensplatz.de_bezeichnung || (friedensplatz.fields && friedensplatz.fields.de_bezeichnung);
-                        return name !== fName;
-                    }) || data.results[1];
-
-                    var calcWidth = function(temp) {
-                        var min = -10, max = 40;
-                        return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
-                    };
-
-                    // Station 1 Rendern
-                    if (friedensplatz) {
-                        var name1 = friedensplatz.de_bezeichnung || (friedensplatz.fields && friedensplatz.fields.de_bezeichnung) || "Unbekannt";
-                        var t1 = parseFloat(friedensplatz.lufttemperatur || (friedensplatz.fields && friedensplatz.fields.lufttemperatur));
-                        
-                        if (!isNaN(t1)) {
-                            logDebug("Station 1 erfolgreich geladen: " + name1 + " (" + t1 + " °C)");
-                            document.getElementById("station1-label").innerText = "📍 " + name1;
-                            document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
-                            document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
-                        } else {
-                            logDebug("Station 1 (Friedensplatz) liefert keinen gueltigen Temperaturwert.", "error");
-                        }
+                    // Nimm den allerersten Sensor zur Analyse
+                    var ersterSensor = data.results[0];
+                    
+                    logDebug("--- LIVE STRUKTUR-ANALYSE ---");
+                    logDebug("Ebene 1 verfuegbare Felder: " + Object.keys(ersterSensor).join(", "));
+                    
+                    if (ersterSensor.fields) {
+                        logDebug("Ebene 2 (.fields) verfuegbare Felder: " + Object.keys(ersterSensor.fields).join(", "));
                     }
 
-                    // Station 2 Rendern
-                    if (ausweichStation) {
-                        var name2 = ausweichStation.de_bezeichnung || (ausweichStation.fields && ausweichStation.fields.de_bezeichnung) || "Ausweichstation";
-                        var t2 = parseFloat(ausweichStation.lufttemperatur || (ausweichStation.fields && ausweichStation.fields.lufttemperatur));
-                        
-                        if (!isNaN(t2)) {
-                            logDebug("Station 2 erfolgreich geladen: " + name2 + " (" + t2 + " °C)");
-                            document.getElementById("station2-label").innerText = "📍 " + name2;
-                            document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
-                            document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
-                        } else {
-                            logDebug("Station 2 liefert keinen gueltigen Temperaturwert.", "error");
-                        }
-                    }
+                    // Flexible Daten-Extraktion (Test auf verschiedene bekannte Feldnamen)
+                    var target = ersterSensor.fields || ersterSensor;
+                    var stationName = target.de_bezeichnung || target.station_name || target.name || "Unbekannt";
+                    
+                    // Wir testen alle denkbaren Temperatur-Feldnamen der Dortmund-API
+                    var tempWert = target.lufttemperatur || target.temperatur || target.temp || target.temperature || target.value;
 
-                    // Zeitstempel flexibel extrahieren
-                    var updateTime = friedensplatz.timestamp || (friedensplatz.fields && friedensplatz.fields.timestamp) || new Date().toISOString();
-                    document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(updateTime).toLocaleString("de-DE");
+                    logDebug("Testauslesung von Station [" + stationName + "]: Erhaltene Temperatur = " + tempWert);
+                    
+                    // Setze Textfelder provisorisch auf den gefundenen Namen
+                    document.getElementById("station1-label").innerText = "📍 " + stationName;
+                    document.getElementById("station1-val").innerText = tempWert !== undefined ? tempWert + " ?" : "Nicht gefunden";
+                    
+                    setStatusBadge("Struktur analysiert", "status-success");
                 } else {
-                    throw new Error("Das result-Array der Stadt Dortmund ist leer.");
+                    throw new Error("Dortmund API liefert leeres 'results'-Array.");
                 }
             } catch (error) {
-                logDebug("Verarbeitungsfehler: " + error.message, "error");
-                setStatusBadge("Verbindungsfehler", "status-error");
-                document.getElementById("station1-val").innerText = "Fehler";
-                document.getElementById("station2-val").innerText = "Fehler";
+                logDebug("Analyse-Fehler: " + error.message, "error");
+                setStatusBadge("Fehler", "status-error");
             }
         }
 
