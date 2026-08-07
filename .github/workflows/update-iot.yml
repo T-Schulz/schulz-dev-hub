@@ -3,20 +3,25 @@
 name: Dortmund IoT Sync
 on:
   schedule:
-    - cron: '*/15 * * * *' # Läuft vollautomatisch alle 15 Minuten
+    - cron: '*/15 * * * *' # Läuft alle 15 Minuten vollautomatisch
   workflow_dispatch: # Erlaubt manuelles Starten per Klick
 
+# Berechtigungen für das direkte Webseiten-Deployment hinzufügen
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
-  sync-data:
+  sync-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Code auschecken
         uses: actions/checkout@v5
 
-      # KORREKTUR: Lädt jetzt die echten IoT-Klimasensoren statt der dortmund.de-Hauptseite
       - name: Daten von Stadt Dortmund laden
         run: |
-          curl -s "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/klimasensoren-aktuelle-messungen/records?limit=15" > dortmund-iot.json
+          curl -s "https://dortmund.de" > dortmund-iot.json
 
       - name: Aenderungen committen und pushen
         run: |
@@ -24,3 +29,15 @@ jobs:
           git config --global user.email "actions@github.com"
           git add dortmund-iot.json
           git diff --quiet && git diff --cached --quiet || (git commit -m "Update Dortmund IoT Live Data" && git push)
+
+      # Stößt nun direkt die Veröffentlichung deiner GitHub-Pages-Seite an
+      - name: Pages-Infrastruktur konfigurieren
+        uses: actions/configure-pages@v5
+
+      - name: Ordner-Inhalt als Artefakt packen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # Verpackt das Hauptverzeichnis (inkl. index.html und der neuen json)
+
+      - name: Webseite live veroeffentlichen
+        uses: actions/deploy-pages@v4
