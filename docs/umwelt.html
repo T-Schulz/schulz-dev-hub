@@ -48,7 +48,7 @@
             <h1>🌱 Umwelt & Wetter</h1>
         </header>
 
-        <!-- NEU: Live IoT-Temperatursensoren (Dortmund) -->
+        <!-- Live IoT-Temperatursensoren (Dortmund) -->
         <div class="card">
             <h2>🌡️ Live-Temperatur (Klimamessnetz)</h2>
             <p>Echtzeit-Messwerte städtischer IoT-Sensoren, direkt geladen via Opendatasoft API.</p>
@@ -99,8 +99,8 @@
     <!-- API-Integration Skript -->
     <script>
         async function fetchTemperatureData() {
-            // URL holt die neuesten Einträge des offiziellen Klimamessnetzes
-            const apiUrl = 'https://opendatasoft.com';
+            // Korrigierte offizielle Open-Data-URL von Dortmund
+            const apiUrl = 'https://dortmund.de';
             
             try {
                 const response = await fetch(apiUrl);
@@ -108,46 +108,55 @@
                 const data = await response.json();
                 
                 if (data.results && data.results.length > 0) {
-                    // Suchen der Station Friedensplatz aus den Ergebnissen
-                    const friedensplatz = data.results.find(r => r.de_bezeichnung === "Friedensplatz") || data.results[0];
-                    // Optionale zweite Station als Vergleichswert greifen
-                    const vergleichsStation = data.results.find(r => r.de_bezeichnung !== friedensplatz.de_bezeichnung) || data.results[1];
+                    
+                    // Opendatasoft v2.1 kapselt die Sensor-Payload in .fields
+                    const friedensplatz = data.results.find(r => r.fields && r.fields.de_bezeichnung === "Friedensplatz") || data.results[0];
+                    const vergleichsStation = data.results.find(r => r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung) || data.results[1];
 
-                    // Funktion zur dynamischen Berechnung der Balkenbreite (Skaliert von -10°C bis 40°C)
+                    // Funktion zur dynamischen Berechnung der Balkenbreite (-10°C bis 40°C)
                     const calcWidth = (temp) => {
                         const min = -10, max = 40;
                         const percentage = ((temp - min) / (max - min)) * 100;
                         return Math.min(Math.max(percentage, 0), 100); 
                     };
 
-                    // Station 1 einbinden
-                    if (friedensplatz) {
-                        const temp1 = friedensplatz.lufttemperatur; // Feldname laut Opendatasoft v2.1 API-Spezifikation
-                        document.getElementById('station1-label').innerText = `📍 ${friedensplatz.de_bezeichnung || 'Friedensplatz'}`;
-                        document.getElementById('station1-bar').style.width = `${calcWidth(temp1)}%`;
-                        document.getElementById('station1-val').innerText = `${temp1.toFixed(1)} °C`;
+                    // Station 1 rendern
+                    if (friedensplatz && friedensplatz.fields) {
+                        const f = friedensplatz.fields;
+                        // Dortmund nutzt das Feld "lufttemperatur" für Temperaturdaten
+                        const temp1 = parseFloat(f.lufttemperatur);
+                        if (!isNaN(temp1)) {
+                            document.getElementById('station1-label').innerText = `📍 ${f.de_bezeichnung}`;
+                            document.getElementById('station1-bar').style.width = `${calcWidth(temp1)}%`;
+                            document.getElementById('station1-val').innerText = `${temp1.toFixed(1)} °C`;
+                        }
                     }
 
-                    // Station 2 einbinden
-                    if (vergleichsStation) {
-                        const temp2 = vergleichsStation.lufttemperatur;
-                        document.getElementById('station2-label').innerText = `📍 ${vergleichsStation.de_bezeichnung}`;
-                        document.getElementById('station2-bar').style.width = `${calcWidth(temp2)}%`;
-                        document.getElementById('station2-val').innerText = `${temp2.toFixed(1)} °C`;
+                    // Station 2 rendern
+                    if (vergleichsStation && vergleichsStation.fields) {
+                        const v = vergleichsStation.fields;
+                        const temp2 = parseFloat(v.lufttemperatur);
+                        if (!isNaN(temp2)) {
+                            document.getElementById('station2-label').innerText = `📍 ${v.de_bezeichnung}`;
+                            document.getElementById('station2-bar').style.width = `${calcWidth(temp2)}%`;
+                            document.getElementById('station2-val').innerText = `${temp2.toFixed(1)} °C`;
+                        }
                     }
 
-                    // Zeitstempel setzen (Nimmt Zeit der Messung)
-                    const updateTime = friedensplatz.timestamp || new Date().toISOString();
+                    // Zeitstempel setzen
+                    const updateTime = friedensplatz.fields.timestamp || new Date().toISOString();
                     document.getElementById('iot-timestamp').innerText = `Messung vom: ${new Date(updateTime).toLocaleString('de-DE')}`;
+                } else {
+                    throw new Error('Keine Datensätze gefunden');
                 }
             } catch (error) {
                 console.error('Fehler:', error);
-                document.getElementById('station1-val').innerText = 'Fehler beim Laden';
-                document.getElementById('station2-val').innerText = 'Fehler beim Laden';
+                document.getElementById('station1-val').innerText = 'API Offline / Fehler';
+                document.getElementById('station2-val').innerText = 'API Offline / Fehler';
             }
         }
 
-        // Beim Laden ausführen & Intervall auf 5 Minuten setzen
+        // Initialer Aufruf und 5-Minuten-Intervall
         fetchTemperatureData();
         setInterval(fetchTemperatureData, 300000);
     </script>
