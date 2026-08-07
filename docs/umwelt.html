@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umwelt & Wetter - Dev-Hub</title>
+    <title>Umwelt & Wetter - Dev-Hub v2.4</title>
     <style>
         :root {
             --bg: #f4f4f9;
@@ -13,6 +13,8 @@
             --accent: #27ae60;
             --border: #e0e0e0;
             --temp-accent: #e67e22;
+            --debug-bg: #2d3748;
+            --debug-text: #edf2f7;
         }
         [data-theme="dark"] {
             --bg: #121212;
@@ -21,14 +23,17 @@
             --accent: #2ecc71;
             --border: #333333;
             --temp-accent: #f39c12;
+            --debug-bg: #1a202c;
+            --debug-text: #a0aec0;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        .version-tag { font-size: 0.8rem; background: var(--border); padding: 4px 8px; border-radius: 4px; font-family: monospace; }
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
         
-        /* Unblockbares CSS-Diagramm */
+        /* CSS-Diagramm */
         .chart-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         .bar-group { display: flex; flex-direction: column; gap: 5px; }
         .bar-label { font-size: 0.9rem; font-weight: bold; }
@@ -39,6 +44,25 @@
         .bar-value { position: absolute; right: 10px; top: 2px; font-size: 0.85rem; font-weight: bold; color: #333; }
         [data-theme="dark"] .bar-value { color: #fff; }
         .timestamp { font-size: 0.8rem; color: #777; margin-top: 15px; text-align: right; }
+
+        /* Optimierter Debugger-Bereich */
+        .debug-console {
+            background-color: var(--debug-bg);
+            color: var(--debug-text);
+            font-family: "Courier New", Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre;
+            max-height: none;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-top: 15px;
+        }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .status-loading { background: #d69e2e; color: #fff; }
+        .status-success { background: #38a169; color: #fff; }
+        .status-error { background: #e53e3e; color: #fff; }
     </style>
 </head>
 <body>
@@ -46,92 +70,120 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
+            <span class="version-tag">v2.4-stable</span>
         </header>
 
-        <!-- Reaktiviert: Live IoT-Temperatursensoren (Dortmund) -->
+        <!-- FENSTER 1: Sensor-Daten Visualisierung -->
         <div class="card">
-            <h2>🌡️ Live-Temperatur (Klimamessnetz)</h2>
-            <p>Echtzeit-Messwerte städtischer IoT-Sensoren, überbrückt via CORS-Proxy.</p>
+            <h2>🌡️ Live-Temperatur (Klimamessnetz Dortmund)</h2>
+            <p>Aktuelle Messwerte städtischer IoT-Sensoren, bezogen via Open Data Dortmund.</p>
             
             <div class="chart-container">
                 <div class="bar-group">
                     <div class="bar-label" id="station1-label">📍 Dortmund Friedensplatz</div>
                     <div class="bar-wrapper">
                         <div class="bar-fill temp" id="station1-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station1-val">Lädt...</div>
+                        <div class="bar-value" id="station1-val">Warte auf API...</div>
                     </div>
                 </div>
                 <div class="bar-group">
-                    <div class="bar-label" id="station2-label">📍 Dortmund (Vergleichsstation)</div>
+                    <div class="bar-label" id="station2-label">📍 Dortmund (Ausweichstation)</div>
                     <div class="bar-wrapper">
                         <div class="bar-fill temp" id="station2-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station2-val">Lädt...</div>
+                        <div class="bar-value" id="station2-val">Warte auf API...</div>
                     </div>
                 </div>
             </div>
             <div class="timestamp" id="iot-timestamp">Stand: --:--:--</div>
         </div>
-    </div>
 
-    <!-- API-Integration mit CORS Bypass -->
+        <!-- FENSTER 2: System-Debugging & Protokoll -->
+        <div class="card" style="border-color: #cbd5e0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">🛠️ Live-API Diagnosekonsole</h3>
+                <div id="status-badge" class="status-badge status-loading">Initialisiere...</div>
+            </div>
+            <div id="debug-log" class="debug-console">Verbindungsvorbereitung läuft...</div>
+        </div>
+    </div>
+        <!-- API-Logik und Datenverarbeitung -->
     <script>
+        const logContainer = document.getElementById('debug-log');
+        const badge = document.getElementById('status-badge');
+
+        function logDebug(msg, type = 'info') {
+            const symbols = { error: '❌ ', success: '✅ ', info: 'ℹ️ ' };
+            logContainer.textContent += `\n[${new Date().toLocaleTimeString()}] ${symbols[type] || ''}${msg}`;
+        }
+
+        function setStatusBadge(text, className) {
+            badge.innerText = text;
+            badge.className = `status-badge ${className}`;
+        }
+
         async function fetchTemperatureData() {
-            const targetUrl = 'https://dortmund.de';
-            // Nutzung eines öffentlichen, anmeldefreien CORS-Proxys
-            const proxyUrl = 'https://allorigins.win' + encodeURIComponent(targetUrl);
+            logContainer.textContent = "--- Neuer Abfragezyklus gestartet ---";
+            setStatusBadge("Lade Daten...", "status-loading");
+            
+            const rawApiUrl = 'https://dortmund.de';
+            const proxyUrl = `https://allorigins.win{encodeURIComponent(rawApiUrl)}`;
+            
+            logDebug(`Kontaktiere CORS-Bypass Proxy...`);
             
             try {
                 const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Proxy-Fehler beim API-Aufruf');
-                const data = await response.json();
+                logDebug(`HTTP-Antwort-Status: ${response.status}`);
+                if (!response.ok) throw new Error(`Netzwerk meldet: ${response.statusText}`);
                 
-                if (data.results && data.results.length > 0) {
-                    
-                    // Suchen der passenden Stationen im JSON-Objekt
-                    const friedensplatz = data.results.find(r => r.fields && r.fields.de_bezeichnung === "Friedensplatz") || data.results[0];
-                    const vergleichsStation = data.results.find(r => r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung) || data.results[1];
+                const wrapperData = await response.json();
+                logDebug(`Proxy-Wrapper aufgelöst. Entpacke rohe JSON-Daten...`);
+                
+                const data = JSON.parse(wrapperData.contents);
+                logDebug(`JSON erfolgreich geparst.`);
 
-                    // Dynamische Balkenbreite (-10°C bis 40°C)
+                if (data.results && data.results.length > 0) {
+                    logDebug(`Datensätze im Array gefunden: ${data.results.length}`);
+                    setStatusBadge("Verbunden", "status-success");
+
+                    const friedensplatz = data.results.find(r => r.fields && r.fields.de_bezeichnung === "Friedensplatz") || data.results[0];
+                    const ausweichStation = data.results.find(r => r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung) || data.results[1];
+
                     const calcWidth = (temp) => {
                         const min = -10, max = 40;
-                        const percentage = ((temp - min) / (max - min)) * 100;
-                        return Math.min(Math.max(percentage, 0), 100); 
+                        return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
                     };
 
-                    // Station 1 befüllen
                     if (friedensplatz && friedensplatz.fields) {
                         const f = friedensplatz.fields;
-                        const temp1 = parseFloat(f.lufttemperatur);
-                        if (!isNaN(temp1)) {
-                            document.getElementById('station1-label').innerText = `📍 ${f.de_bezeichnung}`;
-                            document.getElementById('station1-bar').style.width = `${calcWidth(temp1)}%`;
-                            document.getElementById('station1-val').innerText = `${temp1.toFixed(1)} °C`;
-                        }
+                        const t1 = parseFloat(f.lufttemperatur);
+                        logDebug(`Station 1 identifiziert: ${f.de_bezeichnung} (${t1} °C)`);
+                        document.getElementById('station1-label').innerText = `📍 ${f.de_bezeichnung}`;
+                        document.getElementById('station1-bar').style.width = `${calcWidth(t1)}%`;
+                        document.getElementById('station1-val').innerText = `${t1.toFixed(1)} °C`;
                     }
 
-                    // Station 2 befüllen
-                    if (vergleichsStation && vergleichsStation.fields) {
-                        const v = vergleichsStation.fields;
-                        const temp2 = parseFloat(v.lufttemperatur);
-                        if (!isNaN(temp2)) {
-                            document.getElementById('station2-label').innerText = `📍 ${v.de_bezeichnung}`;
-                            document.getElementById('station2-bar').style.width = `${calcWidth(temp2)}%`;
-                            document.getElementById('station2-val').innerText = `${temp2.toFixed(1)} °C`;
-                        }
+                    if (ausweichStation && ausweichStation.fields) {
+                        const v = ausweichStation.fields;
+                        const t2 = parseFloat(v.lufttemperatur);
+                        logDebug(`Station 2 identifiziert: ${v.de_bezeichnung} (${t2} °C)`);
+                        document.getElementById('station2-label').innerText = `📍 ${v.de_bezeichnung}`;
+                        document.getElementById('station2-bar').style.width = `${calcWidth(t2)}%`;
+                        document.getElementById('station2-val').innerText = `${t2.toFixed(1)} °C`;
                     }
 
-                    // Zeitstempel der Messung ausgeben
                     const updateTime = friedensplatz.fields.timestamp || new Date().toISOString();
                     document.getElementById('iot-timestamp').innerText = `Messung vom: ${new Date(updateTime).toLocaleString('de-DE')}`;
+                } else {
+                    throw new Error("Das empfangene 'results'-Array ist leer.");
                 }
             } catch (error) {
-                console.error('CORS-Proxy Fehler:', error);
-                document.getElementById('station1-val').innerText = 'API gesperrt (CORS)';
-                document.getElementById('station2-val').innerText = 'API gesperrt (CORS)';
+                logDebug(`Verarbeitungsfehler: ${error.message}`, 'error');
+                setStatusBadge("CORS / API Blockiert", "status-error");
+                document.getElementById('station1-val').innerText = 'API Offline';
+                document.getElementById('station2-val').innerText = 'API Offline';
             }
         }
 
-        // Ausführen beim Seitenstart und alle 5 Minuten aktualisieren
         fetchTemperatureData();
         setInterval(fetchTemperatureData, 300000);
     </script>
