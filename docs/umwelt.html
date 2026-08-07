@@ -4,13 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umwelt & Wetter - Dev-Hub v3.0</title>
+    <title>Umwelt & Wetter - Dev-Hub v4.0</title>
     <style>
         :root {
-            --bg: #f4f4f9;--text: #333;--card-bg: #ffffff;--accent: #27ae60;--border: #e0e0e0;--temp-accent: #e67e22;--debug-bg: #2d3748;--debug-text: #edf2f7;
+            --bg: #f4f4f9;
+            --text: #333;
+            --card-bg: #ffffff;
+            --accent: #27ae60;
+            --border: #e0e0e0;
+            --temp-accent: #e67e22;
+            --debug-bg: #2d3748;
+            --debug-text: #edf2f7;
         }
         [data-theme="dark"] {
-            --bg: #121212;--text: #e0e0e0;--card-bg: #1e1e1e;--accent: #2ecc71;--border: #333333;--temp-accent: #f39c12;--debug-bg: #1a202c;--debug-text: #a0aec0;
+            --bg: #121212;
+            --text: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --accent: #2ecc71;
+            --border: #333333;
+            --temp-accent: #f39c12;
+            --debug-bg: #1a202c;
+            --debug-text: #a0aec0;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
         .container { max-width: 800px; margin: 0 auto; }
@@ -18,6 +32,8 @@
         .version-tag { font-size: 0.8rem; background: var(--border); padding: 4px 8px; border-radius: 4px; font-family: monospace; }
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
+        
+        /* CSS-Diagramm */
         .chart-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         .bar-group { display: flex; flex-direction: column; gap: 5px; }
         .bar-label { font-size: 0.9rem; font-weight: bold; }
@@ -40,31 +56,33 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
-            <span class="version-tag">v3.5- yaml workflow</span>
+            <span class="version-tag">v4.0-cacheBuster</span>
         </header>
 
+        <!-- Fenster 1: Live-Balken -->
         <div class="card">
             <h2>🌡️ Live-Temperatur (Klimamessnetz Dortmund)</h2>
-            <p>Lokale Cache-Auslesung via GitHub Action Sync.</p>
+            <p>Echtzeit-Auslesung städtischer IoT-Klimasensoren via GitHub Actions.</p>
             <div class="chart-container">
                 <div class="bar-group">
-                    <div class="bar-label" id="station1-label">📍 Dortmund Friedensplatz</div>
+                    <div class="bar-label" id="station1-label">📍 Dortmund Station 1</div>
                     <div class="bar-wrapper">
                         <div class="bar-fill temp" id="station1-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station1-val">Warte auf Datei...</div>
+                        <div class="bar-value" id="station1-val">Lade Daten...</div>
                     </div>
                 </div>
                 <div class="bar-group">
-                    <div class="bar-label" id="station2-label">📍 Dortmund (Ausweichstation)</div>
+                    <div class="bar-label" id="station2-label">📍 Dortmund Station 2</div>
                     <div class="bar-wrapper">
                         <div class="bar-fill temp" id="station2-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station2-val">Warte auf Datei...</div>
+                        <div class="bar-value" id="station2-val">Lade Daten...</div>
                     </div>
                 </div>
             </div>
             <div class="timestamp" id="iot-timestamp">Stand: --:--:--</div>
         </div>
 
+        <!-- Fenster 2: Diagnose -->
         <div class="card" style="border-color: #cbd5e0;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0;">🛠️ Live-API Diagnosekonsole</h3>
@@ -73,74 +91,70 @@
             <div id="debug-log" class="debug-console">Suche lokale Datendatei...</div>
         </div>
     </div>
+        <script>
+        var logContainer = document.getElementById("debug-log");
+        var badge = document.getElementById("status-badge");
 
-    <!-- API-Logik und Datenverarbeitung v3.5 -->
-    <script>
-        const logContainer = document.getElementById('debug-log');
-        const badge = document.getElementById('status-badge');
-
-        function logDebug(msg, type = 'info') {
-            const symbols = { error: '❌ ', success: '✅ ', info: 'ℹ️ ' };
-            logContainer.textContent += '\n[' + new Date().toLocaleTimeString() + '] ' + (symbols[type] || '') + msg;
-            logContainer.scrollTop = logContainer.scrollHeight;
+        function logDebug(msg, type) {
+            var symbol = type === "error" ? "❌ " : "ℹ️ ";
+            logContainer.textContent += "\n[" + new Date().toLocaleTimeString() + "] " + symbol + msg;
         }
 
         async function fetchTemperatureData() {
-            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v3.5) ---";
+            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v4.0) ---";
             badge.innerText = "Lade Cache...";
             badge.className = "status-badge status-loading";
 
             try {
-                // KORREKTUR: Springt eine Ebene hoeher (../), um die Datei im Hauptordner zu finden
-                var response = await fetch("../dortmund-iot.json");
+                // Hebelt den Browser-Cache aus und fragt die lokale Datei ab
+                var response = await fetch("dortmund-iot.json?v=" + new Date().getTime());
                 logDebug("Datei-Abfrage abgesetzt. HTTP-Status: " + response.status);
                 
-                if (!response.ok) throw new Error("Datei fehlt auf dem Server. Status: " + response.status);
+                if (!response.ok) throw new Error("Datei fehlt im HTML-Ordner. Status: " + response.status);
                 var data = await response.json();
 
-                // Erkennung ob fälschlicherweise HTML (Redirect) statt JSON geladen wurde
-                if (data.results === undefined) {
-                    throw new Error("Erhaltene Datei ist kein gueltiges JSON der Dortmund-API. Workflow prüfen!");
-                }
-
-                if (data.results && data.results.length > 0) {
-                    logDebug("Gueltiges JSON extrahiert. Eintraege: " + data.results.length);
+                if (data && data.results && data.results.length > 0) {
+                    logDebug("Dortmund-JSON erfolgreich geladen. Eintraege: " + data.results.length);
                     badge.innerText = "Verbunden";
                     badge.className = "status-badge status-success";
 
-                    // Suchen der Stationen im flachen v2.1 JSON-Format
-                    var friedensplatz = data.results.find(function(r) { return r.de_bezeichnung === "Friedensplatz"; }) || data.results[0];
-                    var ausweichStation = data.results.find(function(r) { return r.de_bezeichnung !== friedensplatz.de_bezeichnung; }) || data.results[1];
+                    // Holt die ersten beiden verfügbaren Stationen aus deinem JSON
+                    var station1 = data.results[0];
+                    var station2 = data.results[1];
 
                     var calcWidth = function(temp) {
                         var min = -10, max = 40;
                         return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
                     };
 
-                    if (friedensplatz) {
-                        var t1 = parseFloat(friedensplatz.lufttemperatur);
-                        logDebug("Station 1: " + friedensplatz.de_bezeichnung + " (" + t1 + " °C)");
-                        document.getElementById("station1-label").innerText = "📍 " + friedensplatz.de_bezeichnung;
+                    // Erste Station befüllen
+                    if (station1) {
+                        var name1 = station1.body_item_fields_gerateinformation_strasse || "Dortmund Mitte";
+                        var t1 = parseFloat(station1.air_temperature);
+                        logDebug("Station 1: " + name1 + " (" + t1 + " °C)");
+                        document.getElementById("station1-label").innerText = "📍 " + name1;
                         document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
                         document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
                     }
 
-                    if (ausweichStation) {
-                        var t2 = parseFloat(ausweichStation.lufttemperatur);
-                        logDebug("Station 2: " + ausweichStation.de_bezeichnung + " (" + t2 + " °C)");
-                        document.getElementById("station2-label").innerText = "📍 " + ausweichStation.de_bezeichnung;
+                    // Zweite Station befüllen
+                    if (station2) {
+                        var name2 = station2.body_item_fields_gerateinformation_strasse || "Dortmund West";
+                        var t2 = parseFloat(station2.air_temperature);
+                        logDebug("Station 2: " + name2 + " (" + t2 + " °C)");
+                        document.getElementById("station2-label").innerText = "📍 " + name2;
                         document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
                         document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
                     }
 
-                    var updateTime = friedensplatz.timestamp || new Date().toISOString();
+                    var updateTime = station1.measured_at || new Date().toISOString();
                     document.getElementById("iot-timestamp").innerText = "Letzter Sync: " + new Date(updateTime).toLocaleString("de-DE");
                 } else {
-                    throw new Error("Das result-Array der Stadt Dortmund ist leer.");
+                    throw new Error("Das results-Array in der JSON-Datei ist leer.");
                 }
             } catch (error) {
                 logDebug("Fehler: " + error.message, "error");
-                badge.innerText = "Synchronisations-Fehler";
+                badge.innerText = "Daten-Fehler";
                 badge.className = "status-badge status-error";
             }
         }
