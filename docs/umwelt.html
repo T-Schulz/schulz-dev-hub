@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umwelt & Wetter - Dev-Hub v4.0</title>
+    <title>Umwelt & Wetter - Dev-Hub v5.0</title>
     <style>
         :root {
             --bg: #f4f4f9;
@@ -13,6 +13,8 @@
             --accent: #27ae60;
             --border: #e0e0e0;
             --temp-accent: #e67e22;
+            --humidity-accent: #2980b9;
+            --battery-accent: #8e44ad;
             --debug-bg: #2d3748;
             --debug-text: #edf2f7;
         }
@@ -23,6 +25,8 @@
             --accent: #2ecc71;
             --border: #333333;
             --temp-accent: #f39c12;
+            --humidity-accent: #3498db;
+            --battery-accent: #9b59b6;
             --debug-bg: #1a202c;
             --debug-text: #a0aec0;
         }
@@ -33,17 +37,36 @@
         .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
         
-        /* CSS-Diagramm */
-        .chart-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-        .bar-group { display: flex; flex-direction: column; gap: 5px; }
-        .bar-label { font-size: 0.9rem; font-weight: bold; }
-        .bar-wrapper { width: 100%; background: #eee; border-radius: 4px; height: 24px; overflow: hidden; position: relative; }
+        /* Erweiterte Sensor-Karten */
+        .sensor-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 15px; }
+        .station-title { font-size: 1.1rem; font-weight: bold; margin: 0; }
+        .geo-link { font-size: 0.85rem; color: var(--humidity-accent); text-decoration: none; font-family: monospace; }
+        .geo-link:hover { text-decoration: underline; }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; font-size: 0.85rem; margin-top: 10px; color: #666; }
+        [data-theme="dark"] .meta-grid { color: #aaa; }
+        .meta-item { background: var(--bg); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); }
+        
+        /* Balkendiagramme mit Skala */
+        .chart-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .bar-group { display: flex; flex-direction: column; gap: 4px; }
+        .bar-label { font-size: 0.85rem; font-weight: 600; color: #555; }
+        [data-theme="dark"] .bar-label { color: #bbb; }
+        .bar-wrapper { width: 100%; background: #eee; border-radius: 4px; height: 20px; overflow: hidden; position: relative; }
         [data-theme="dark"] .bar-wrapper { background: #333; }
-        .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s ease-in-out; }
+        .bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease-in-out; }
         .bar-fill.temp { background: var(--temp-accent); }
-        .bar-value { position: absolute; right: 10px; top: 2px; font-size: 0.85rem; font-weight: bold; color: #333; }
+        .bar-fill.humidity { background: var(--humidity-accent); }
+        .bar-value { position: absolute; right: 10px; top: 1px; font-size: 0.8rem; font-weight: bold; color: #333; }
         [data-theme="dark"] .bar-value { color: #fff; }
-        .timestamp { font-size: 0.8rem; color: #777; margin-top: 15px; text-align: right; }
+        
+        /* Visuelle Ticks für die Skala */
+        .scale-ticks { display: flex; justify-content: space-between; padding: 0 2px; font-size: 0.75rem; color: #888; font-family: monospace; margin-top: -4px; margin-bottom: 5px; }
+
+        /* Synchronisations-Header */
+        .sync-box { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: #666; text-align: right; }
+        [data-theme="dark"] .sync-box { color: #aaa; }
+        .countdown-highlight { font-weight: bold; color: var(--temp-accent); }
+
         .debug-console { background-color: var(--debug-bg); color: var(--debug-text); font-family: monospace; padding: 15px; border-radius: 8px; overflow-x: auto; white-space: pre; font-size: 0.85rem; line-height: 1.4; margin-top: 15px; }
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
         .status-loading { background: #d69e2e; color: #fff; }
@@ -56,33 +79,77 @@
         <a class="btn-link" href="index.html">← Zurück zur Hauptzentrale</a>
         <header>
             <h1>🌱 Umwelt & Wetter</h1>
-            <span class="version-tag">v4.0-cacheBuster</span>
+            <div class="sync-box">
+                <div id="iot-timestamp">Letzter Sync: --:--:--</div>
+                <div id="iot-countdown">Nächstes Update in: <span class="countdown-highlight">--:--</span></div>
+            </div>
         </header>
 
-        <!-- Fenster 1: Live-Balken -->
+        <!-- SENSOR STATION 1 -->
         <div class="card">
-            <h2>🌡️ Live-Temperatur (Klimamessnetz Dortmund)</h2>
-            <p>Echtzeit-Auslesung städtischer IoT-Klimasensoren via GitHub Actions.</p>
+            <div class="sensor-header">
+                <h2 class="station-title" id="st1-title">📍 Lade Station 1...</h2>
+                <a class="geo-link" id="st1-geo" href="#" target="_blank">🗺️ Koordinaten laden...</a>
+            </div>
             <div class="chart-container">
                 <div class="bar-group">
-                    <div class="bar-label" id="station1-label">📍 Dortmund Station 1</div>
+                    <div class="bar-label">Lufttemperatur</div>
                     <div class="bar-wrapper">
-                        <div class="bar-fill temp" id="station1-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station1-val">Lade Daten...</div>
+                        <div class="bar-fill temp" id="st1-t-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="st1-t-val">-- °C</div>
                     </div>
+                    <div class="scale-ticks"><span>0°C</span><span>10°C</span><span>20°C</span><span>30°C</span><span>40°C</span></div>
                 </div>
                 <div class="bar-group">
-                    <div class="bar-label" id="station2-label">📍 Dortmund Station 2</div>
+                    <div class="bar-label">Relative Luftfeuchtigkeit</div>
                     <div class="bar-wrapper">
-                        <div class="bar-fill temp" id="station2-bar" style="width: 0%;"></div>
-                        <div class="bar-value" id="station2-val">Lade Daten...</div>
+                        <div class="bar-fill humidity" id="st1-h-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="st1-h-val">-- %</div>
                     </div>
+                    <div class="scale-ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
                 </div>
             </div>
-            <div class="timestamp" id="iot-timestamp">Stand: --:--:--</div>
+            <div class="meta-grid" id="st1-meta">
+                <div class="meta-item">🔋 Batterie: <span id="st1-bat">-- V</span></div>
+                <div class="meta-item">🏷️ Typ: <span id="st1-type">--</span></div>
+                <div class="meta-item">🛠️ Modell: <span id="st1-model">--</span></div>
+                <div class="meta-item">🏗️ Höhe: <span id="st1-height">--</span></div>
+            </div>
         </div>
 
-        <!-- Fenster 2: Diagnose -->
+        <!-- SENSOR STATION 2 -->
+        <div class="card">
+            <div class="sensor-header">
+                <h2 class="station-title" id="st2-title">📍 Lade Station 2...</h2>
+                <a class="geo-link" id="st2-geo" href="#" target="_blank">🗺️ Koordinaten laden...</a>
+            </div>
+            <div class="chart-container">
+                <div class="bar-group">
+                    <div class="bar-label">Lufttemperatur</div>
+                    <div class="bar-wrapper">
+                        <div class="bar-fill temp" id="st2-t-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="st2-t-val">-- °C</div>
+                    </div>
+                    <div class="scale-ticks"><span>0°C</span><span>10°C</span><span>20°C</span><span>30°C</span><span>40°C</span></div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar-label">Relative Luftfeuchtigkeit</div>
+                    <div class="bar-wrapper">
+                        <div class="bar-fill humidity" id="st2-h-bar" style="width: 0%;"></div>
+                        <div class="bar-value" id="st2-h-val">-- %</div>
+                    </div>
+                    <div class="scale-ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+                </div>
+            </div>
+            <div class="meta-grid" id="st2-meta">
+                <div class="meta-item">🔋 Batterie: <span id="st2-bat">-- V</span></div>
+                <div class="meta-item">🏷️ Typ: <span id="st2-type">--</span></div>
+                <div class="meta-item">🛠️ Modell: <span id="st2-model">--</span></div>
+                <div class="meta-item">🏗️ Höhe: <span id="st2-height">--</span></div>
+            </div>
+        </div>
+
+        <!-- DIAGNOSE KONSOLE -->
         <div class="card" style="border-color: #cbd5e0;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0;">🛠️ Live-API Diagnosekonsole</h3>
@@ -94,19 +161,41 @@
         <script>
         var logContainer = document.getElementById("debug-log");
         var badge = document.getElementById("status-badge");
+        var syncTimestamp = null;
 
         function logDebug(msg, type) {
             var symbol = type === "error" ? "❌ " : "ℹ️ ";
             logContainer.textContent += "\n[" + new Date().toLocaleTimeString() + "] " + symbol + msg;
         }
 
+        // Berechnet den mathematisch genauen GitHub-Sync-Countdown (Jede 15. Minute der Stunde: :00, :15, :30, :45)
+        function startSyncCountdown() {
+            setInterval(function() {
+                var jetzt = new Date();
+                var minuten = jetzt.getMinutes();
+                var sekunden = jetzt.getSeconds();
+                
+                var verbleibendeMinuten = 14 - (minuten % 15);
+                var verbleibendeSekunden = 59 - sekunden;
+                
+                if (verbleibendeMinuten < 10) verbleibendeMinuten = "0" + verbleibendeMinuten;
+                if (verbleibendeSekunden < 10) verbleibendeSekunden = "0" + verbleibendeSekunden;
+                
+                document.getElementById("iot-countdown").innerHTML = "Nächstes Update in: <span class='countdown-highlight'>" + verbleibendeMinuten + ":" + verbleibendeSekunden + "</span>";
+                
+                // Triggert den Reload der Datei kurz nach dem GitHub-Intervall
+                if (verbleibendeMinuten === "00" && verbleibendeSekunden === "05") {
+                    fetchTemperatureData();
+                }
+            }, 1000);
+        }
+
         async function fetchTemperatureData() {
-            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v4.0) ---";
+            logContainer.textContent = "--- Starte lokalen Datei-Abruf (v5.0) ---";
             badge.innerText = "Lade Cache...";
             badge.className = "status-badge status-loading";
 
             try {
-                // Hebelt den Browser-Cache aus und fragt die lokale Datei ab
                 var response = await fetch("dortmund-iot.json?v=" + new Date().getTime());
                 logDebug("Datei-Abfrage abgesetzt. HTTP-Status: " + response.status);
                 
@@ -114,41 +203,68 @@
                 var data = await response.json();
 
                 if (data && data.results && data.results.length > 0) {
-                    logDebug("Dortmund-JSON erfolgreich geladen. Eintraege: " + data.results.length);
+                    logDebug("Dortmund-JSON erfolgreich extrahiert. Eintraege: " + data.results.length);
                     badge.innerText = "Verbunden";
                     badge.className = "status-badge status-success";
 
-                    // Holt die ersten beiden verfügbaren Stationen aus deinem JSON
-                    var station1 = data.results[0];
-                    var station2 = data.results[1];
+                    var s1 = data.results[0];
+                    var s2 = data.results[1];
 
-                    var calcWidth = function(temp) {
-                        var min = -10, max = 40;
-                        return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
-                    };
+                    var scaleTemp = function(t) { return Math.min(Math.max((t / 40) * 100, 0), 100); };
+                    var scaleHum = function(h) { return Math.min(Math.max(h, 0), 100); };
 
-                    // Erste Station befüllen
-                    if (station1) {
-                        var name1 = station1.body_item_fields_gerateinformation_strasse || "Dortmund Mitte";
-                        var t1 = parseFloat(station1.air_temperature);
-                        logDebug("Station 1: " + name1 + " (" + t1 + " °C)");
-                        document.getElementById("station1-label").innerText = "📍 " + name1;
-                        document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
-                        document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
+                    // STATION 1 BEFÜLLEN
+                    if (s1) {
+                        var strasse1 = s1.body_item_fields_gerateinformation_strasse || "Alter Mühlenweg";
+                        var t1 = parseFloat(s1.air_temperature);
+                        var h1 = parseFloat(s1.data_relative_humidity);
+                        
+                        logDebug("Station 1 Mapping: " + strasse1 + " (" + t1 + " °C, " + h1 + " % RH)");
+                        
+                        document.getElementById("st1-title").innerText = "📍 " + strasse1 + " " + (s1.body_item_fields_gerateinformation_hausnummer || "");
+                        document.getElementById("st1-t-bar").style.width = scaleTemp(t1) + "%";
+                        document.getElementById("st1-t-val").innerText = t1.toFixed(1) + " °C";
+                        document.getElementById("st1-h-bar").style.width = scaleHum(h1) + "%";
+                        document.getElementById("st1-h-val").innerText = h1.toFixed(1) + " %";
+                        
+                        document.getElementById("st1-bat").innerText = s1.data_battery_voltage ? s1.data_battery_voltage.toFixed(2) + " V" : "N/A";
+                        document.getElementById("st1-type").innerText = s1.body_item_fields_gerateinformation_sensortyp || "N/A";
+                        document.getElementById("st1-model").innerText = s1.sensormodell || "N/A";
+                        document.getElementById("st1-height").innerText = s1.body_item_fields_gerateinformation_installationshohe || "N/A";
+                        
+                        if (s1.standort && s1.standort.lat) {
+                            document.getElementById("st1-geo").href = "https://openstreetmap.org" + s1.standort.lat + "&mlon=" + s1.standort.lon + "#map=18/" + s1.standort.lat + "/" + s1.standort.lon;
+                            document.getElementById("st1-geo").innerText = "🗺️ Lat: " + s1.standort.lat.toFixed(4) + " | Lon: " + s1.standort.lon.toFixed(4);
+                        }
                     }
 
-                    // Zweite Station befüllen
-                    if (station2) {
-                        var name2 = station2.body_item_fields_gerateinformation_strasse || "Dortmund West";
-                        var t2 = parseFloat(station2.air_temperature);
-                        logDebug("Station 2: " + name2 + " (" + t2 + " °C)");
-                        document.getElementById("station2-label").innerText = "📍 " + name2;
-                        document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
-                        document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
+                    // STATION 2 BEFÜLLEN
+                    if (s2) {
+                        var strasse2 = s2.body_item_fields_gerateinformation_strasse || "Boschstraße";
+                        var t2 = parseFloat(s2.air_temperature);
+                        var h2 = parseFloat(s2.data_relative_humidity);
+                        
+                        logDebug("Station 2 Mapping: " + strasse2 + " (" + t2 + " °C, " + h2 + " % RH)");
+                        
+                        document.getElementById("st2-title").innerText = "📍 " + strasse2 + " " + (s2.body_item_fields_gerateinformation_hausnummer || "");
+                        document.getElementById("st2-t-bar").style.width = scaleTemp(t2) + "%";
+                        document.getElementById("st2-t-val").innerText = t2.toFixed(1) + " °C";
+                        document.getElementById("st2-h-bar").style.width = scaleHum(h2) + "%";
+                        document.getElementById("st2-h-val").innerText = h2.toFixed(1) + " %";
+                        
+                        document.getElementById("st2-bat").innerText = s2.data_battery_voltage ? s2.data_battery_voltage.toFixed(2) + " V" : "N/A";
+                        document.getElementById("st2-type").innerText = s2.body_item_fields_gerateinformation_sensortyp || "N/A";
+                        document.getElementById("st2-model").innerText = s2.sensormodell || "N/A";
+                        document.getElementById("st2-height").innerText = s2.body_item_fields_gerateinformation_installationshohe || "N/A";
+                        
+                        if (s2.standort && s2.standort.lat) {
+                            document.getElementById("st2-geo").href = "https://openstreetmap.org" + s2.standort.lat + "&mlon=" + s2.standort.lon + "#map=18/" + s2.standort.lat + "/" + s2.standort.lon;
+                            document.getElementById("st2-geo").innerText = "🗺️ Lat: " + s2.standort.lat.toFixed(4) + " | Lon: " + s2.standort.lon.toFixed(4);
+                        }
                     }
 
-                    var updateTime = station1.measured_at || new Date().toISOString();
-                    document.getElementById("iot-timestamp").innerText = "Letzter Sync: " + new Date(updateTime).toLocaleString("de-DE");
+                    syncTimestamp = s1.measured_at || new Date().toISOString();
+                    document.getElementById("iot-timestamp").innerText = "Letzter Sync: " + new Date(syncTimestamp).toLocaleString("de-DE");
                 } else {
                     throw new Error("Das results-Array in der JSON-Datei ist leer.");
                 }
@@ -159,8 +275,9 @@
             }
         }
 
+        // System-Zündung
         fetchTemperatureData();
-        setInterval(fetchTemperatureData, 60000);
+        startSyncCountdown();
     </script>
 </body>
 </html>
