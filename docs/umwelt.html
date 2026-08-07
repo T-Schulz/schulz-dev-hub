@@ -157,34 +157,55 @@
                     logDebug("Datensaetze gefunden: " + data.results.length);
                     setStatusBadge("Verbunden", "status-success");
 
-                    var friedensplatz = data.results.find(function(r) { return r.fields && r.fields.de_bezeichnung === "Friedensplatz"; }) || data.results[0];
-                    var ausweichStation = data.results.find(function(r) { return r.fields && r.fields.de_bezeichnung !== friedensplatz.fields.de_bezeichnung; }) || data.results[1];
+                    // Flexible Suche: Unterstützt flache und verschachtelte Strukturen der Dortmund-API
+                    var friedensplatz = data.results.find(function(r) {
+                        var name = r.de_bezeichnung || (r.fields && r.fields.de_bezeichnung);
+                        return name === "Friedensplatz";
+                    }) || data.results[0];
+
+                    var ausweichStation = data.results.find(function(r) {
+                        var name = r.de_bezeichnung || (r.fields && r.fields.de_bezeichnung);
+                        var fName = friedensplatz.de_bezeichnung || (friedensplatz.fields && friedensplatz.fields.de_bezeichnung);
+                        return name !== fName;
+                    }) || data.results[1];
 
                     var calcWidth = function(temp) {
                         var min = -10, max = 40;
                         return Math.min(Math.max(((temp - min) / (max - min)) * 100, 0), 100);
                     };
 
-                    if (friedensplatz && friedensplatz.fields) {
-                        var f = friedensplatz.fields;
-                        var t1 = parseFloat(f.lufttemperatur);
-                        logDebug("Station 1: " + f.de_bezeichnung + " (" + t1 + " °C)");
-                        document.getElementById("station1-label").innerText = "📍 " + f.de_bezeichnung;
-                        document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
-                        document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
+                    // Station 1 Rendern
+                    if (friedensplatz) {
+                        var name1 = friedensplatz.de_bezeichnung || (friedensplatz.fields && friedensplatz.fields.de_bezeichnung) || "Unbekannt";
+                        var t1 = parseFloat(friedensplatz.lufttemperatur || (friedensplatz.fields && friedensplatz.fields.lufttemperatur));
+                        
+                        if (!isNaN(t1)) {
+                            logDebug("Station 1 erfolgreich geladen: " + name1 + " (" + t1 + " °C)");
+                            document.getElementById("station1-label").innerText = "📍 " + name1;
+                            document.getElementById("station1-bar").style.width = calcWidth(t1) + "%";
+                            document.getElementById("station1-val").innerText = t1.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Station 1 (Friedensplatz) liefert keinen gueltigen Temperaturwert.", "error");
+                        }
                     }
 
-                    if (ausweichStation && ausweichStation.fields) {
-                        var v = ausweichStation.fields;
-                        var t2 = parseFloat(v.lufttemperatur);
-                        logDebug("Station 2: " + v.de_bezeichnung + " (" + t2 + " °C)");
-                        document.getElementById("station2-label").innerText = "📍 " + v.de_bezeichnung;
-                        document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
-                        document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
+                    // Station 2 Rendern
+                    if (ausweichStation) {
+                        var name2 = ausweichStation.de_bezeichnung || (ausweichStation.fields && ausweichStation.fields.de_bezeichnung) || "Ausweichstation";
+                        var t2 = parseFloat(ausweichStation.lufttemperatur || (ausweichStation.fields && ausweichStation.fields.lufttemperatur));
+                        
+                        if (!isNaN(t2)) {
+                            logDebug("Station 2 erfolgreich geladen: " + name2 + " (" + t2 + " °C)");
+                            document.getElementById("station2-label").innerText = "📍 " + name2;
+                            document.getElementById("station2-bar").style.width = calcWidth(t2) + "%";
+                            document.getElementById("station2-val").innerText = t2.toFixed(1) + " °C";
+                        } else {
+                            logDebug("Station 2 liefert keinen gueltigen Temperaturwert.", "error");
+                        }
                     }
 
-                    // KORREKTUR: Absicherung des Zeitstempels gegen unvollständige Sensordaten
-                    var updateTime = (friedensplatz && friedensplatz.fields && friedensplatz.fields.timestamp) ? friedensplatz.fields.timestamp : new Date().toISOString();
+                    // Zeitstempel flexibel extrahieren
+                    var updateTime = friedensplatz.timestamp || (friedensplatz.fields && friedensplatz.fields.timestamp) || new Date().toISOString();
                     document.getElementById("iot-timestamp").innerText = "Messung vom: " + new Date(updateTime).toLocaleString("de-DE");
                 } else {
                     throw new Error("Das result-Array der Stadt Dortmund ist leer.");
