@@ -1,4 +1,4 @@
-# This is a basic workflow to help you get started with Actions
+# This is a basic Actions workflow to get IoT Data from Open Data Dortmund
 
 name: Dortmund IoT Sync
 on:
@@ -11,11 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Code auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
+      # KORREKTUR: Lädt jetzt die echten IoT-Klimasensoren statt der dortmund.de-Hauptseite
       - name: Daten von Stadt Dortmund laden
         run: |
-          curl -s "https://dortmund.de" > dortmund-iot.json
+          curl -s "https://open-data.dortmund.de/api/explore/v2.1/catalog/datasets/klimasensoren-aktuelle-messungen/records?limit=15" > dortmund-iot.json
 
       - name: Aenderungen committen und pushen
         run: |
@@ -23,15 +24,3 @@ jobs:
           git config --global user.email "actions@github.com"
           git add dortmund-iot.json
           git diff --quiet && git diff --cached --quiet || (git commit -m "Update Dortmund IoT Live Data" && git push)
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
