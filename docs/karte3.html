@@ -1,54 +1,68 @@
 <!DOCTYPE html>
 <html lang="de">
-<header style="display: block; margin-bottom: 25px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 15px;">
-        <h2>🚟 TU Dortmund (H-Bahn Dashboard)</h2>
-        <div style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">System: Online ✔</div>
-    </div>
-
-    <!-- KORRIGIERT: Eigenes Design ohne Klassen-Konflikt -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; width: 100%; box-sizing: border-box;">
-        <!-- Kachel Linie 1 / Linie 50 -->
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #f39c12; box-sizing: border-box;">
-            <h4 style="margin: 0 0 8px 0; color: #f39c12;">🚟 Fahrplan-Waggon (Linie 50 / L1)</h4>
-            <div id="dashL1Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
-            <div id="dashL1Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-            <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
-        </div>
-
-        <!-- Kachel Express / Test-Waggon -->
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #e74c3c; box-sizing: border-box;">
-            <h4 style="margin: 0 0 8px 0; color: #e74c3c;">🚀 Express-Test-Waggon</h4>
-            <div id="dashExpressStatus" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne...</div>
-            <div id="dashExpressEta" style="font-size: 0.85rem; color: #666;">Geschwindigkeit: Dynamisch</div>
-        </div>
-
-        <!-- Kachel Strecke 2 -->
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #9b59b6; box-sizing: border-box;">
-            <h4 style="margin: 0 0 8px 0; color: #9b59b6;">🚟 Campus-Pendel (Linie 2)</h4>
-            <div id="dashL2Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
-            <div id="dashL2Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-            <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
-        </div>
-    </div>
-</header>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TU Dortmund (H-Bahn Dashboard)</title>
+    <link rel="stylesheet" href="leaflet.css" />
+    <style>
+        :root { --bg: #f4f4f9; --text: #333; --card-bg: #ffffff; --accent: #007bff; --border: #e0e0e0; }
+        [data-theme="dark"] { --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --accent: #00adb5; --border: #333333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+        #map { height: 480px; width: 100%; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
+        .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
+        .coord-logger { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
+    </style>
+</head>
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptseite</a>
         <header>
-            <h2>🚟 TU Dortmund (H-Bahn)</h2>
-            <div id="mapStatus" style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">Status: Online ✔</div>
+            <h2>🚟 TU Dortmund (H-Bahn Dashboard)</h2>
+            <div style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">System: Online ✔</div>
         </header>
-        <div class="card">
-            <div id="map"></div>
-            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte kopiert GPS-Koordinaten):</div>
-            <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick fügt Daten ein..."></textarea>
 
-            <!-- NEU: Steuerungs-Buttons für den Logger -->
-            <div style="margin-top: 10px; display: flex; gap: 10px;">
+        <!-- 1. Hauptkarte (Stabiles Layout, füllt die Breite perfekt aus) -->
+        <div class="card" style="padding: 15px; margin-bottom: 20px;">
+            <div id="map"></div>
+            <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte fügt Punkte hinzu):</div>
+            <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick auf die Karte fügt Daten im JSON-Format ein..."></textarea>
+            
+            <!-- Steuerungs-Buttons für den Logger -->
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button id="btnCopyJson" class="btn-link" style="margin: 0; background-color: #27ae60; cursor: pointer;">📋 Gesamtes JSON kopieren</button>
                 <button id="btnClearLogger" class="btn-link" style="margin: 0; background-color: #e74c3c; cursor: pointer;">🗑️ Box leeren</button>
                 <button id="btnTogglePoints" class="btn-link" style="margin: 0; background-color: #2980b9; cursor: pointer;">👁️ Punkte anzeigen</button>
+            </div>
+        </div>
+
+        <!-- 2. Dashboard-Kacheln (Sicher unterhalb der Karte platziert) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; width: 100%; box-sizing: border-box;">
+            <!-- Kachel Linie 1 / Linie 50 -->
+            <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #f39c12; box-sizing: border-box;">
+                <h4 style="margin: 0 0 8px 0; color: #f39c12;">🚟 Fahrplan-Waggon (Linie 50 / L1)</h4>
+                <div id="dashL1Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
+                <div id="dashL1Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
+                <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
+            </div>
+
+            <!-- Kachel Express / Test-Waggon -->
+            <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #e74c3c; box-sizing: border-box;">
+                <h4 style="margin: 0 0 8px 0; color: #e74c3c;">🚀 Express-Test-Waggon</h4>
+                <div id="dashExpressStatus" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne...</div>
+                <div id="dashExpressEta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Geschwindigkeit: Dynamisch</div>
+            </div>
+
+            <!-- Kachel Strecke 2 -->
+            <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); border-left: 5px solid #9b59b6; box-sizing: border-box;">
+                <h4 style="margin: 0 0 8px 0; color: #9b59b6;">🚟 Campus-Pendel (Linie 2)</h4>
+                <div id="dashL2Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
+                <div id="dashL2Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
+                <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
             </div>
         </div>
     </div>
@@ -107,7 +121,7 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             // ====================================================================
-            // 1. KARTE LADEN & AUTOMATISCHER ZOOM (KORRIGIERT GEGEN KACHEL-BUG)
+            // 1. KARTE LADEN & AUTOMATISCHER GEOMETRIE-ZOOM
             // ====================================================================
             const map = L.map('map');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
@@ -116,22 +130,16 @@
             }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // Fehlerbehebung: Erhöht auf 200ms für stabile CSS-Berechnung
-            setTimeout(() => {
-                map.invalidateSize();
-
-                if (hbahnData.strecke1 && hbahnData.strecke2) {
-                    const alleStrecken = L.featureGroup([
-                        L.polyline(hbahnData.strecke1), 
-                        L.polyline(hbahnData.strecke2)
-                    ]);
-                    
-                    // Berechnet den Zoom jetzt exakt anhand der echten Schienen-Geometrie
-                    map.fitBounds(alleStrecken.getBounds().pad(0.05)); // pad verringert auf 0.05 für näheren Zoom
-                } else {
-                    map.setView([51.4835, 7.4110], 16);
-                }
-            }, 200);
+            // Lädt den Zoom direkt und scharf anhand der echten Schienen-Geometrie
+            if (hbahnData.strecke1 && hbahnData.strecke2) {
+                const alleStrecken = L.featureGroup([
+                    L.polyline(hbahnData.strecke1), 
+                    L.polyline(hbahnData.strecke2)
+                ]);
+                map.fitBounds(alleStrecken.getBounds().pad(0.08)); // 8% Rand für perfekten Fokus
+            } else {
+                map.setView([51.4835, 7.4110], 16);
+            }
 
             // ====================================================================
             // LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
