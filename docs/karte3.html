@@ -10,10 +10,10 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 15px;">
         <!-- Kachel Linie 1 / Linie 50 -->
         <div class="card" style="margin: 0; padding: 15px; border-left: 5px solid #f39c12;">
-            <h4 style="margin: 0 0 8px 0; color: #f39c12;">🚟 Fahrplan-Waggon (Linie 50 / L1)</h4>
+            <h4 style="margin: 0 0 8px 0; color: #f39c12;">🚟 Fahrplan-Waggon (Linie 1)</h4>
             <div id="dashL1Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
             <div id="dashL1Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
+            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan/hbahn/linie_1/" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
         </div>
 
         <!-- Kachel Express / Test-Waggon -->
@@ -28,7 +28,7 @@
             <h4 style="margin: 0 0 8px 0; color: #9b59b6;">🚟 Campus-Pendel (Linie 2)</h4>
             <div id="dashL2Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
             <div id="dashL2Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
+            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan/hbahn/linie_2/" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
         </div>
     </div>
 </header>
@@ -106,14 +106,35 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden (ohne festen View)
+            // ====================================================================
+            // 1. KARTE LADEN & AUTOMATISCHER ZOOM (KORRIGIERT GEGEN KACHEL-BUG)
+            // ====================================================================
             const map = L.map('map');
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                maxZoom: 19, 
+                attribution: '&copy; OpenStreetMap' 
+            }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
-            // NEU: Karte automatisch so zoomen, dass Strecke 1 und Strecke 2 komplett sichtbar sind
-            const alleStrecken = L.featureGroup([L.polyline(hbahnData.strecke1), L.polyline(hbahnData.strecke2)]);
-            map.fitBounds(alleStrecken.getBounds().pad(0.1)); // pad(0.1) fügt 10% Rand hinzu
+            // Fehlerbehebung: Warte 100ms, bis das Dashboard-Layout fertig gerendert ist
+            setTimeout(() => {
+                // Zwinge Leaflet, die echte Container-Größe einzulesen
+                map.invalidateSize();
+
+                if (hbahnData.strecke1 && hbahnData.strecke2) {
+                    // Erstelle die Feature-Gruppe für die Berechnung des Kartenausschnitts
+                    const alleStrecken = L.featureGroup([
+                        L.polyline(hbahnData.strecke1), 
+                        L.polyline(hbahnData.strecke2)
+                    ]);
+                    
+                    // Setze den Fokus perfekt auf das H-Bahn-Netz
+                    map.fitBounds(alleStrecken.getBounds().pad(0.1));
+                } else {
+                    // Fallback, falls Daten nicht geladen werden konnten
+                    map.setView([51.4835, 7.4110], 15);
+                }
+            }, 100);
 
             // ====================================================================
             // LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
