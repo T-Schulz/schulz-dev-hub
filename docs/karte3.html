@@ -293,7 +293,7 @@
 
                 // --- HINFAHRT: Technologiezentrum -> Eichlinghofen (Minuten .22 bis .30) ---
                 if (l1GesamtSekunden >= 120 && l1GesamtSekunden < 360) {
-                    // Start bei Minute 2 (120s), Fahrt bis Uni (Minute 6 / 360s)
+                    // Start bei Minute 2 (120s), Fahrt bis Universität (S) (Minute 6 / 360s)
                     const fortschritt = (l1GesamtSekunden - 120) / 240;
                     const meter = fortschritt * laengeStrecke1;
                     
@@ -301,10 +301,10 @@
                     fahrplanText = "Unterwegs nach: <b>Dortmund Universität (S)</b>";
                     statusInfo = "Fahrt Richtung Eichlinghofen 🟢";
                     speedL1 = Math.round(vMeterProSekundeL1 * 3.6);
-                    etaText = `Ankunft Uni (S) in: ${Math.ceil(360 - l1GesamtSekunden)}s`;
+                    etaText = `Ankunft Dortmund Universität (S) in: ${Math.ceil(360 - l1GesamtSekunden)}s`;
 
                 } else if (l1GesamtSekunden >= 360 && l1GesamtSekunden < 420) {
-                    // Uni bis Campus Süd (Minute 6 bis Minute 7)
+                    // Universität (S) bis Campus Süd (Minute 6 bis Minute 7)
                     const fortschritt = (l1GesamtSekunden - 120) / 240;
                     const meter = fortschritt * laengeStrecke1;
                     
@@ -329,9 +329,9 @@
                     // Halt in Eichlinghofen (Minute 8 bis Minute 9 -> 1 Min Pause)
                     fahrplanPos = hbahnData.strecke1[hbahnData.strecke1.length - 1];
                     fahrplanText = "Halt in <b>Eichlinghofen</b>.<br>Fahrgastwechsel.";
-                    statusInfo = "Halt am Bahnsteig (Süd) 🟡";
+                    statusInfo = "Halt am Bahnsteig Eichlinghofen 🟡";
                     speedL1 = 0;
-                    etaText = `Abfahrt Richtung TZ in: ${Math.ceil(540 - l1GesamtSekunden)}s`;
+                    etaText = `Abfahrt Richtung Technologiezentrum in: ${Math.ceil(540 - l1GesamtSekunden)}s`;
 
                 } 
                 // --- RÜCKFAHRT: Eichlinghofen -> Technologiezentrum (Minute 9 bis Minute 2) ---
@@ -348,15 +348,25 @@
                         const meter = fortschritt * laengeStrecke1;
                         
                         fahrplanPos = getPositionAtDistance(map, rueckfahrtRoute1, meter);
-                        fahrplanText = "Unterwegs nach: <b>Technologiezentrum</b>";
-                        statusInfo = "Rückfahrt zum Nord-Ast 🟢";
+                        statusInfo = "Rückfahrt Richtung Technologiezentrum 🟢";
                         speedL1 = Math.round((laengeStrecke1 / 480) * 3.6);
-                        etaText = `Ankunft TZ in: ${Math.ceil(480 - rueckfahrtSekunden)}s`;
+                        
+                        // Dynamischer Text je nach Fortschritt auf dem Rückweg
+                        if (rueckfahrtSekunden < 120) {
+                            fahrplanText = "Unterwegs nach: <b>Campus Süd</b>";
+                            etaText = `Ankunft Campus Süd in: ${Math.ceil(120 - rueckfahrtSekunden)}s`;
+                        } else if (rueckfahrtSekunden < 240) {
+                            fahrplanText = "Unterwegs nach: <b>Dortmund Universität (S)</b>";
+                            etaText = `Ankunft Dortmund Universität (S) in: ${Math.ceil(240 - rueckfahrtSekunden)}s`;
+                        } else {
+                            fahrplanText = "Unterwegs nach: <b>Technologiezentrum (Endstation)</b>";
+                            etaText = `Ankunft Technologiezentrum in: ${Math.ceil(480 - rueckfahrtSekunden)}s`;
+                        }
                     } else {
                         // 4 Minuten Pause am Technologiezentrum
                         fahrplanPos = hbahnData.strecke1[0];
                         fahrplanText = "Wartet im <b>Technologiezentrum</b>.";
-                        statusInfo = "Pause im Depot (TZ) 🔵";
+                        statusInfo = "Pause am Technologiezentrum 🔵";
                         speedL1 = 0;
                         const restBisStart = l1GesamtSekunden > 120 ? (720 - l1GesamtSekunden) : (120 - l1GesamtSekunden);
                         etaText = `Nächste Abfahrt in: ${Math.floor(restBisStart / 60)}m ${restBisStart % 60}s`;
