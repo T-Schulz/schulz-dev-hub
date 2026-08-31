@@ -183,8 +183,8 @@
                 }
             });
 
-            
-            map.addControl(new CoordControl());
+            // Doppelte Koordinaten-Anzeige hier auskommentiert. Siehe oben Live-Koordinaten-Anzeige
+            // map.addControl(new CoordControl());
 
             // 2. Schienennetz aus hbahn-data.js zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
