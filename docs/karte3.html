@@ -35,6 +35,7 @@
             <div style="margin-top: 10px; display: flex; gap: 10px;">
                 <button id="btnCopyJson" class="btn-link" style="margin: 0; background-color: #27ae60; cursor: pointer;">📋 Gesamtes JSON kopieren</button>
                 <button id="btnClearLogger" class="btn-link" style="margin: 0; background-color: #e74c3c; cursor: pointer;">🗑️ Box leeren</button>
+                <button id="btnTogglePoints" class="btn-link" style="margin: 0; background-color: #2980b9; cursor: pointer;">👁️ Punkte anzeigen</button>
             </div>
         </div>
     </div>
@@ -103,6 +104,69 @@
                     });
                     return container;
                 }
+
+            // ====================================================================
+            // NEU: STRECKENPUNKTE VISUALISIEREN (ROT)
+            // ====================================================================
+            const btnTogglePoints = document.getElementById("btnTogglePoints");
+            
+            // Layer-Gruppe für die roten Punkte
+            const punkteLayerGruppe = L.layerGroup();
+            let punkteSichtbar = false;
+
+            // Funktion, um die Punkte zu generieren
+            function zeichneStreckenPunkte() {
+                punkteLayerGruppe.clearLayers(); // Altes Zeichnen löschen
+
+                // Punkte für Strecke 1 hinzufügen
+                if (hbahnData.strecke1) {
+                    hbahnData.strecke1.forEach((coord, index) => {
+                        L.circleMarker(coord, {
+                            radius: 5,
+                            fillColor: "#e74c3c", // Deutlich rot
+                            color: "#c0392b",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 1
+                        })
+                        .addTo(punkteLayerGruppe)
+                        .bindPopup(`<b>Strecke 1</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0]}, Lng: ${coord[1]}`);
+                    });
+                }
+
+                // Punkte für Strecke 2 hinzufügen
+                if (hbahnData.strecke2) {
+                    hbahnData.strecke2.forEach((coord, index) => {
+                        L.circleMarker(coord, {
+                            radius: 5,
+                            fillColor: "#e74c3c", // Deutlich rot
+                            color: "#c0392b",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 1
+                        })
+                        .addTo(punkteLayerGruppe)
+                        .bindPopup(`<b>Strecke 2</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0]}, Lng: ${coord[1]}`);
+                    });
+                }
+            }
+
+            // Klick-Event für den Button
+            btnTogglePoints.addEventListener("click", function() {
+                punkteSichtbar = !punkteSichtbar;
+
+                if (punkteSichtbar) {
+                    zeichneStreckenPunkte();
+                    map.addLayer(punkteLayerGruppe);
+                    btnTogglePoints.innerHTML = "🙈 Punkte ausblenden";
+                    btnTogglePoints.style.backgroundColor = "#7f8c8d";
+                } else {
+                    map.removeLayer(punkteLayerGruppe);
+                    btnTogglePoints.innerHTML = "👁️ Punkte anzeigen";
+                    btnTogglePoints.style.backgroundColor = "#2980b9";
+                }
+            });
+
             });
             map.addControl(new CoordControl());
 
