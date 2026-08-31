@@ -30,6 +30,12 @@
             <div id="map"></div>
             <div class="logger-title">📋 GPS-Sammelbox (Rechtsklick auf Karte kopiert GPS-Koordinaten):</div>
             <textarea class="coord-logger" id="meinKartenLogger" readonly placeholder="Rechtsklick fügt Daten ein..."></textarea>
+
+            <!-- NEU: Steuerungs-Buttons für den Logger -->
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button id="btnCopyJson" class="btn-link" style="margin: 0; background-color: #27ae60; cursor: pointer;">📋 Gesamtes JSON kopieren</button>
+                <button id="btnClearLogger" class="btn-link" style="margin: 0; background-color: #e74c3c; cursor: pointer;">🗑️ Box leeren</button>
+            </div>
         </div>
     </div>
 
@@ -69,9 +75,17 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             // 1. Karte laden und fokussieren
-            const map = L.map('map').setView([51.4835, 7.4110], 16);
+            // const map = L.map('map').setView([51.4835, 7.4110], 16);
+            // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+            // L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+            // 1. Karte laden (ohne festen View)
+            const map = L.map('map');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+            // NEU: Karte automatisch so zoomen, dass Strecke 1 und Strecke 2 komplett sichtbar sind
+            const alleStrecken = L.featureGroup([L.polyline(hbahnData.strecke1), L.polyline(hbahnData.strecke2)]);
+            map.fitBounds(alleStrecken.getBounds().pad(0.1)); // pad(0.1) fügt 10% Rand hinzu
 
             // ====================================================================
             // LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
@@ -188,12 +202,54 @@
 
             }, 50);
 
-            // 5. RECHTSKLICK-LOGGER AKTIVIEREN
+            // ====================================================================
+            // 5. ERWEITERTER RECHTSKLICK-LOGGER (JSON-FORMAT)
+            // ====================================================================
             const loggerBox = document.getElementById("meinKartenLogger");
+            const btnCopy = document.getElementById("btnCopyJson");
+            const btnClear = document.getElementById("btnClearLogger");
+            
+            // Array, das alle geklickten Koordinaten zwischenspeichert
+            let geklicktePunkte = [];
+
             map.on('contextmenu', function(e) {
-                const chunk = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}], // Klick-Punkt\n`;
-                loggerBox.value += chunk;
-                navigator.clipboard.writeText(`[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`);
+                const lat = parseFloat(e.latlng.lat.toFixed(6));
+                const lng = parseFloat(e.latlng.lng.toFixed(6));
+                
+                // Punkt im Array speichern
+                geklicktePunkte.push([lat, lng]);
+                
+                // Formatiertes JSON in die Textarea schreiben (mit 2 Leerzeichen eingerückt)
+                loggerBox.value = JSON.stringify(geklicktePunkte, null, 2);
+                
+                // Den einzelnen, neuesten Punkt direkt in die Zwischenablage legen
+                navigator.clipboard.writeText(`[${lat}, ${lng}]`);
+            });
+
+            // Button: Kompletten Inhalt kopieren
+            btnCopy.addEventListener("click", function() {
+                if (geklicktePunkte.length === 0) {
+                    alert("Die Sammelbox ist noch leer!");
+                    return;
+                }
+                navigator.clipboard.writeText(loggerBox.value);
+                
+                // Visuelles Feedback auf dem Button
+                const originalText = btnCopy.innerHTML;
+                btnCopy.innerHTML = "✔ Kopiert!";
+                btnCopy.style.backgroundColor = "#2ecc71";
+                setTimeout(() => {
+                    btnCopy.innerHTML = originalText;
+                    btnCopy.style.backgroundColor = "#27ae60";
+                }, 1500);
+            });
+
+            // Button: Box zurücksetzen
+            btnClearLogger.addEventListener("click", function() {
+                if (confirm("Möchtest du alle gesammelten Punkte wirklich löschen?")) {
+                    geklicktePunkte = [];
+                    loggerBox.value = "";
+                }
             });
         });
     </script>
