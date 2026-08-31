@@ -52,6 +52,7 @@
         }
 
         function calculateCurrentPosition(coords, totalFraction) {
+            if (!coords || coords.length === 0) return [51.4835, 7.4110];
             if (totalFraction <= 0) return coords[0];
             if (totalFraction >= 1) return coords[coords.length - 1];
             const numSegments = coords.length - 1;
@@ -62,18 +63,21 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden und auf Strecke 1 fokussieren
+            // 1. Karte laden und fokussieren
             const map = L.map('map').setView([51.4835, 7.4110], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 
             // ====================================================================
-            // NEU: LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG (WIE IN KARTE 2)
+            // LIVE-KOORDINATEN ANZEIGE BEI MAUSBEWEGUNG
             // ====================================================================
             const CoordControl = L.Control.extend({
                 options: { position: 'bottomright' },
                 onAdd: function() {
                     const container = L.DomUtil.create('div', 'coordinate-box');
+                    container.style.background = 'rgba(255,255,255,0.8)';
+                    container.style.padding = '5px';
+                    container.style.borderRadius = '4px';
                     container.innerHTML = "Lat: 51.48350, Lon: 7.41100";
                     map.on('mousemove', function(e) {
                         container.innerHTML = `Lat: ${e.latlng.lat.toFixed(5)}, Lon: ${e.latlng.lng.toFixed(5)}`;
@@ -85,7 +89,7 @@
 
             // 2. Schienennetz aus hbahn-data.js zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
-            L.polyline(hbahnData.strecke2, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
+            L.polyline(hbahnData.strecke2, { color: '#4caf50', weight: 6, opacity: 0.5 }).addTo(map); // Strecke 2 in grün
 
             // 3. Haltestellen zeichnen (Große Kreise)
             hbahnData.haltestellen.forEach(function(stat) {
@@ -94,7 +98,7 @@
             });
 
             // ====================================================================
-            // UNBLOCKBARE WAGGON-ANIMATIONEN (Als Canvas-Kreise gerendert)
+            // WAGGON-INITIALISIERUNG (Fehler aus Teil 1 hier komplett entfernt!)
             // ====================================================================
             const fahrplanWaggon = L.circleMarker(hbahnData.strecke1[0], {
                 radius: 12, fillColor: "#f39c12", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.85
@@ -106,12 +110,21 @@
             }).addTo(map);
             expressWaggon.bindPopup("<b>🚀 Express-Test-Waggon</b>");
 
+            // NEU: Ein dritter Waggon, der exklusiv auf der neuen Strecke 2 pendelt!
+            const strecke2Waggon = L.circleMarker(hbahnData.strecke2[0] || [51.4835, 7.4110], {
+                radius: 10, fillColor: "#9b59b6", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
+            }).addTo(map);
+            strecke2Waggon.bindPopup("<b>🚟 Campus-Pendel (Strecke 2)</b>");
+
             // 4. ANIMATIONS-TIMER STARTEN
             let expressDirection = true;
             let expressProgress = 0;
+            
+            let strecke2Direction = true;
+            let strecke2Progress = 0;
 
             setInterval(() => {
-                // --- A. Berechnung für den Fahrplan-Waggon ---
+                // --- A. Berechnung für den Fahrplan-Waggon (Strecke 1) ---
                 const jetzt = new Date();
                 const sekunden = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
                 const fortschritt = sekunden % 600; // 10-Minuten-Umlauf
@@ -141,7 +154,7 @@
                 fahrplanWaggon.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${fahrplanText}`);
                 document.getElementById("mapStatus").innerHTML = `Fahrplan-Status: ${statusInfo}`;
 
-                // --- B. Berechnung für den schnellen Express-Waggon ---
+                // --- B. Berechnung für den schnellen Express-Waggon (Strecke 1) ---
                 if (expressDirection) {
                     expressProgress += 0.005;
                     if (expressProgress >= 1) expressDirection = false;
@@ -152,6 +165,20 @@
                 const expressPos = calculateCurrentPosition(hbahnData.strecke1, expressProgress);
                 expressWaggon.setLatLng(expressPos);
                 expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${expressDirection ? "Campus Süd" : "Eichlinghofen"}</b>`);
+
+                // --- C. NEU: Berechnung für den Waggon auf Strecke 2 ---
+                if (hbahnData.strecke2 && hbahnData.strecke2.length > 0) {
+                    if (strecke2Direction) {
+                        strecke2Progress += 0.003; // Etwas langsamer als Express
+                        if (strecke2Progress >= 1) strecke2Direction = false;
+                    } else {
+                        strecke2Progress -= 0.003;
+                        if (strecke2Progress <= 0) strecke2Direction = true;
+                    }
+                    const s2Pos = calculateCurrentPosition(hbahnData.strecke2, strecke2Progress);
+                    strecke2Waggon.setLatLng(s2Pos);
+                    strecke2Waggon.getPopup().setContent(`<h3>🚟 Strecke 2 Waggon</h3>Status: Pendelt auf neuer Route 🔄`);
+                }
 
             }, 50);
 
