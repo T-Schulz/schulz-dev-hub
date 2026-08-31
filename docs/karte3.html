@@ -43,7 +43,7 @@
         }
 
         // ====================================================================
-        // KORRIGIERTE INTERNE GEOMETRIE-ENGINE
+        // KORRIGIERTE INTERNE GEOMETRIE-ENGINE (JETZT FEHLERFREI)
         // ====================================================================
         function getInterpolatedPoint(p1, p2, fraction) {
             const lat = p1[0] + (p2[0] - p1[0]) * fraction;
@@ -55,10 +55,15 @@
             if (!coords || coords.length === 0) return [51.4835, 7.4110];
             if (totalFraction <= 0) return coords[0];
             if (totalFraction >= 1) return coords[coords.length - 1];
+            
             const numSegments = coords.length - 1;
             const segmentFraction = 1 / numSegments;
             const targetSegment = Math.floor(totalFraction / segmentFraction);
             const remainder = (totalFraction % segmentFraction) / segmentFraction;
+            
+            // Absicherung gegen Array-Überlauf bei Rundungsfehlern
+            if (targetSegment >= numSegments) return coords[coords.length - 1];
+            
             return getInterpolatedPoint(coords[targetSegment], coords[targetSegment + 1], remainder);
         }
 
@@ -98,7 +103,7 @@
             });
 
             // ====================================================================
-            // WAGGON-INITIALISIERUNG (Fehler aus Teil 1 hier komplett entfernt!)
+            // WAGGON-INITIALISIERUNG
             // ====================================================================
             const fahrplanWaggon = L.circleMarker(hbahnData.strecke1[0], {
                 radius: 12, fillColor: "#f39c12", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.85
@@ -110,8 +115,9 @@
             }).addTo(map);
             expressWaggon.bindPopup("<b>🚀 Express-Test-Waggon</b>");
 
-            // NEU: Ein dritter Waggon, der exklusiv auf der neuen Strecke 2 pendelt!
-            const strecke2Waggon = L.circleMarker(hbahnData.strecke2[0] || [51.4835, 7.4110], {
+            // Initialisierung für Strecke 2 Waggon mit Fallback-Koordinate falls Strecke leer ist
+            const s2Start = (hbahnData.strecke2 && hbahnData.strecke2.length > 0) ? hbahnData.strecke2[0] : [51.4835, 7.4110];
+            const strecke2Waggon = L.circleMarker(s2Start, {
                 radius: 10, fillColor: "#9b59b6", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
             strecke2Waggon.bindPopup("<b>🚟 Campus-Pendel (Strecke 2)</b>");
@@ -166,10 +172,10 @@
                 expressWaggon.setLatLng(expressPos);
                 expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${expressDirection ? "Campus Süd" : "Eichlinghofen"}</b>`);
 
-                // --- C. NEU: Berechnung für den Waggon auf Strecke 2 ---
-                if (hbahnData.strecke2 && hbahnData.strecke2.length > 0) {
+                // --- C. Berechnung für den Waggon auf Strecke 2 ---
+                if (hbahnData.strecke2 && hbahnData.strecke2.length > 1) {
                     if (strecke2Direction) {
-                        strecke2Progress += 0.003; // Etwas langsamer als Express
+                        strecke2Progress += 0.003; 
                         if (strecke2Progress >= 1) strecke2Direction = false;
                     } else {
                         strecke2Progress -= 0.003;
