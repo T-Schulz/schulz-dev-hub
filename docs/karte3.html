@@ -1,24 +1,37 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TU Dortmund (Karte 3)</title>
-    <link rel="stylesheet" href="leaflet.css" />
-    <style>
-        :root { --bg: #f4f4f9; --text: #333; --card-bg: #ffffff; --accent: #007bff; --border: #e0e0e0; }
-        [data-theme="dark"] { --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --accent: #00adb5; --border: #333333; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
-        .btn-link { display: inline-block; background-color: #333; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px; border: none; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
-        #map { height: 480px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); z-index: 1; }
-        
-        .logger-title { margin-top: 20px; font-size: 0.95rem; font-weight: bold; }
-        .coord-logger { width: 100%; height: 90px; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text); box-sizing: border-box; resize: vertical; margin-top: 5px; }
-    </style>
-</head>
+<header style="display: block; margin-bottom: 25px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 15px;">
+        <h2>🚟 TU Dortmund (H-Bahn Dashboard)</h2>
+        <div style="font-weight: bold; color: #27ae60; font-size: 0.9rem;">System: Online ✔</div>
+    </div>
+
+    <!-- NEU: Dashboard Info-Boxen -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 15px;">
+        <!-- Kachel Linie 1 / Linie 50 -->
+        <div class="card" style="margin: 0; padding: 15px; border-left: 5px solid #f39c12;">
+            <h4 style="margin: 0 0 8px 0; color: #f39c12;">🚟 Fahrplan-Waggon (Linie 50 / L1)</h4>
+            <div id="dashL1Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
+            <div id="dashL1Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
+            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
+        </div>
+
+        <!-- Kachel Express / Test-Waggon -->
+        <div class="card" style="margin: 0; padding: 15px; border-left: 5px solid #e74c3c;">
+            <h4 style="margin: 0 0 8px 0; color: #e74c3c;">🚀 Express-Test-Waggon</h4>
+            <div id="dashExpressStatus" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne...</div>
+            <div id="dashExpressEta" style="font-size: 0.85rem; color: #666;">Geschwindigkeit: Dynamisch</div>
+        </div>
+
+        <!-- Kachel Strecke 2 -->
+        <div class="card" style="margin: 0; padding: 15px; border-left: 5px solid #9b59b6;">
+            <h4 style="margin: 0 0 8px 0; color: #9b59b6;">🚟 Campus-Pendel (Linie 2)</h4>
+            <div id="dashL2Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
+            <div id="dashL2Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
+            <a href="https://www.bus-und-bahn.de/h-bahn/fahrplan" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
+        </div>
+    </div>
+</header>
 <body>
     <div class="container">
         <a class="btn-link" href="index.html">← Zurück zur Hauptseite</a>
@@ -223,70 +236,101 @@
             let strecke2Direction = true;
             let strecke2Progress = 0;
 
-            // Vor dem Intervall einmalig die Gesamtlängen berechnen (sobald map existiert)
+            // Vor dem Intervall die Gesamtlängen in Metern ermitteln
             const laengeStrecke1 = getRouteLengthInMeters(map, hbahnData.strecke1);
             const laengeStrecke2 = getRouteLengthInMeters(map, hbahnData.strecke2);
 
             setInterval(() => {
-                // --- A. Berechnung für den Fahrplan-Waggon (Strecke 1) ---
+                // --- A. BERECHNUNG & ETA FÜR FAHRPLAN-WAGGON (LINIE 50 / 1) ---
                 const jetzt = new Date();
                 const sekunden = (jetzt.getMinutes() * 60) + jetzt.getSeconds();
-                const fortschritt = sekunden % 600; // 10-Minuten-Umlauf
-                let fahrplanPos, fahrplanText = "", statusInfo = "";
+                const fortschritt = sekunden % 600; // 10-Minuten-Umlauf (600 Sek)
+                
+                let fahrplanPos, fahrplanText = "", statusInfo = "", etaText = "";
+                const geschwindigkeitL1 = laengeStrecke1 / 120; // Meter pro Sekunde auf der Hinfahrt
 
                 if (fortschritt >= 0 && fortschritt < 120) {
-                    // Hinfahrt: Interpolation über die gesamte Meter-Länge der Strecke
-                    const meterFortschritt = (fortschritt / 120) * laengeStrecke1;
-                    fahrplanPos = getPositionAtDistance(map, hbahnData.strecke1, meterFortschritt);
+                    const meter = (fortschritt / 120) * laengeStrecke1;
+                    fahrplanPos = getPositionAtDistance(map, hbahnData.strecke1, meter);
                     fahrplanText = "Unterwegs nach: <b>Campus Süd</b>";
                     statusInfo = "Fahrt nach Campus Süd 🟢";
+                    
+                    // ETA Berechnung: Verbleibende Meter / MeterProSekunde
+                    const restSekunden = Math.ceil((laengeStrecke1 - meter) / geschwindigkeitL1);
+                    etaText = `Ankunft am <b>Campus Süd</b> in: ${Math.floor(restSekunden / 60)}m ${restSekunden % 60}s`;
+                    
                 } else if (fortschritt >= 120 && fortschritt < 180) {
                     fahrplanPos = hbahnData.strecke1[hbahnData.strecke1.length - 1];
                     fahrplanText = "Halt in <b>Campus Süd</b><br>Fahrgastwechsel.";
-                    statusInfo = "Halt am Campus 🟡";
+                    statusInfo = "Halt am Campus Süd 🟡";
+                    const restWartezeit = Math.ceil(180 - fortschritt);
+                    etaText = `Abfahrt Richtung Eichlinghofen in: ${restWartezeit}s`;
+                    
                 } else if (fortschritt >= 180 && fortschritt < 300) {
-                    // Rückfahrt: Umgedrehte Route nutzen
                     const rueckfahrtRoute = [...hbahnData.strecke1].reverse();
-                    const meterFortschritt = ((fortschritt - 180) / 120) * laengeStrecke1;
-                    fahrplanPos = getPositionAtDistance(map, rueckfahrtRoute, meterFortschritt);
+                    const meter = ((fortschritt - 180) / 120) * laengeStrecke1;
+                    fahrplanPos = getPositionAtDistance(map, rueckfahrtRoute, meter);
                     fahrplanText = "Unterwegs nach: <b>Eichlinghofen</b>";
                     statusInfo = "Fahrt nach Eichlinghofen 🟢";
+                    
+                    const restSekunden = Math.ceil((laengeStrecke1 - meter) / geschwindigkeitL1);
+                    etaText = `Ankunft in <b>Eichlinghofen</b> in: ${Math.floor(restSekunden / 60)}m ${restSekunden % 60}s`;
+                    
                 } else {
                     fahrplanPos = hbahnData.strecke1[0];
                     const restWartezeit = Math.ceil(600 - fortschritt);
-                    fahrplanText = `Wartet in <b>Eichlinghofen</b>.<br>Nächste Abfahrt in: ${Math.floor(restWartezeit / 60)}m ${restWartezeit % 60}s`;
-                    statusInfo = `Pause in Eichlinghofen (Abfahrt in ${Math.floor(restWartezeit / 60)}m) 🔵`;
+                    fahrplanText = `Wartet in <b>Eichlinghofen</b>.`;
+                    statusInfo = `Pause im Depot 🔵`;
+                    etaText = `Nächste Planfahrt in: ${Math.floor(restWartezeit / 60)}m ${restWartezeit % 60}s`;
                 }
                 
                 fahrplanWaggon.setLatLng(fahrplanPos);
-                fahrplanWaggon.getPopup().setContent(`<h3>🚟 Fahrplan-Waggon</h3>${fahrplanText}`);
-                document.getElementById("mapStatus").innerHTML = `Fahrplan-Status: ${statusInfo}`;
+                fahrplanWaggon.getPopup().setContent(`<h3>🚟 Linie 50</h3>${fahrplanText}`);
+                
+                // Dashboard Aktualisierung für Linie 1
+                document.getElementById("dashL1Status").innerHTML = statusInfo;
+                document.getElementById("dashL1Eta").innerHTML = etaText;
 
-                // --- B. Berechnung für den schnellen Express-Waggon (Strecke 1) ---
-                // Erhöhung pro Schritt jetzt in echten Metern (z. B. 4 Meter pro 50ms = 80 m/s)
+
+                // --- B. BERECHNUNG FÜR DEN EXPRESS-WAGGON ---
+                const vExpress = 4; // 4 Meter pro 50ms = 80 m/s
                 if (expressDirection) {
-                    expressProgress += 4; 
+                    expressProgress += vExpress;
                     if (expressProgress >= laengeStrecke1) expressDirection = false;
                 } else {
-                    expressProgress -= 4;
+                    expressProgress -= vExpress;
                     if (expressProgress <= 0) expressDirection = true;
                 }
                 const expressPos = getPositionAtDistance(map, hbahnData.strecke1, expressProgress);
                 expressWaggon.setLatLng(expressPos);
-                expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${expressDirection ? "Campus Süd" : "Eichlinghofen"}</b>`);
+                
+                const expZiel = expressDirection ? "Technologiezentrum" : "Eichlinghofen";
+                expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: ${expZiel}`);
+                document.getElementById("dashExpressStatus").innerHTML = `Unterwegs nach ${expZiel} ⚡`;
 
-                // --- C. Berechnung für den Waggon auf Strecke 2 ---
+
+                // --- C. BERECHNUNG & ETA FÜR STRÄCKE 2 (CAMPUS-PENDEL) ---
                 if (hbahnData.strecke2 && hbahnData.strecke2.length > 1) {
+                    const vL2 = 1.5; // Fährt 1.5 Meter pro 50ms Tick (= 30 m/s)
                     if (strecke2Direction) {
-                        strecke2Progress += 2.5; // Fährt 2.5 Meter pro Tick
+                        strecke2Progress += vL2;
                         if (strecke2Progress >= laengeStrecke2) strecke2Direction = false;
                     } else {
-                        strecke2Progress -= 2.5;
+                        strecke2Progress -= vL2;
                         if (strecke2Progress <= 0) strecke2Direction = true;
                     }
                     const s2Pos = getPositionAtDistance(map, hbahnData.strecke2, strecke2Progress);
                     strecke2Waggon.setLatLng(s2Pos);
-                    strecke2Waggon.getPopup().setContent(`<h3>🚟 Strecke 2 Waggon</h3>Status: Pendelt auf neuer Route 🔄`);
+                    
+                    const l2Ziel = strecke2Direction ? "Campus Nord" : "Campus Süd";
+                    strecke2Waggon.getPopup().setContent(`<h3>🚟 Linie 2</h3>Ziel: ${l2Ziel}`);
+                    
+                    // Berechne verbleibende Ticks bis zum Ziel für die ETA
+                    const verbleibendeMeter = strecke2Direction ? (laengeStrecke2 - strecke2Progress) : strecke2Progress;
+                    const sekundenBisZiel = Math.ceil(verbleibendeMeter / (vL2 * 20)); // 20 Ticks = 1 Sekunde
+                    
+                    document.getElementById("dashL2Status").innerHTML = `Pendelt nach ${l2Ziel} 🔄`;
+                    document.getElementById("dashL2Eta").innerHTML = `Nächster Halt in ca. <b>${sekundenBisZiel}s</b>`;
                 }
 
             }, 50);
