@@ -50,28 +50,46 @@
         }
 
         // ====================================================================
-        // KORRIGIERTE INTERNE GEOMETRIE-ENGINE (JETZT FEHLERFREI)
+        // PHYSIKALISCHE GEOMETRIE-ENGINE (DISTANZ IN METERN)
         // ====================================================================
-        function getInterpolatedPoint(p1, p2, fraction) {
-            const lat = p1[0] + (p2[0] - p1[0]) * fraction;
-            const lng = p1[1] + (p2[1] - p1[1]) * fraction;
-            return [lat, lng];
+        
+        // Berechnet die Gesamtlänge einer Strecke in Metern
+        function getRouteLengthInMeters(map, coords) {
+            if (!coords || coords.length < 2) return 0;
+            let totalDistance = 0;
+            for (let i = 0; i < coords.length - 1; i++) {
+                totalDistance += map.distance(coords[i], coords[i + 1]);
+            }
+            return totalDistance;
         }
 
-        function calculateCurrentPosition(coords, totalFraction) {
+        // Findet die genaue Koordinate basierend auf der Entfernung in Metern vom Start
+        function getPositionAtDistance(map, coords, targetDistanceInMeters) {
             if (!coords || coords.length === 0) return [51.4835, 7.4110];
-            if (totalFraction <= 0) return coords[0];
-            if (totalFraction >= 1) return coords[coords.length - 1];
+            if (targetDistanceInMeters <= 0) return coords[0];
             
-            const numSegments = coords.length - 1;
-            const segmentFraction = 1 / numSegments;
-            const targetSegment = Math.floor(totalFraction / segmentFraction);
-            const remainder = (totalFraction % segmentFraction) / segmentFraction;
+            let accumulatedDistance = 0;
+
+            for (let i = 0; i < coords.length - 1; i++) {
+                const p1 = coords[i];
+                const p2 = coords[i + 1];
+                const segmentDistance = map.distance(p1, p2);
+
+                // Liegt die gesuchte Distanz in diesem Segment?
+                if (accumulatedDistance + segmentDistance >= targetDistanceInMeters) {
+                    const remainingDistanceInSegment = targetDistanceInMeters - accumulatedDistance;
+                    const fraction = segmentDistance > 0 ? (remainingDistanceInSegment / segmentDistance) : 0;
+                    
+                    // Lineare Interpolation der Koordinaten im aktuellen Segment
+                    const lat = p1[0] + (p2[0] - p1[0]) * fraction;
+                    const lng = p1[1] + (p2[1] - p1[1]) * fraction;
+                    return [lat, lng];
+                }
+                accumulatedDistance += segmentDistance;
+            }
             
-            // Absicherung gegen Array-Überlauf bei Rundungsfehlern
-            if (targetSegment >= numSegments) return coords[coords.length - 1];
-            
-            return getInterpolatedPoint(coords[targetSegment], coords[targetSegment + 1], remainder);
+            // Fallback: Wenn Distanz größer als Strecke, liefere Endpunkt
+            return coords[coords.length - 1];
         }
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -205,6 +223,10 @@
             let strecke2Direction = true;
             let strecke2Progress = 0;
 
+            // Vor dem Intervall einmalig die Gesamtlängen berechnen (sobald map existiert)
+            const laengeStrecke1 = getRouteLengthInMeters(map, hbahnData.strecke1);
+            const laengeStrecke2 = getRouteLengthInMeters(map, hbahnData.strecke2);
+
             setInterval(() => {
                 // --- A. Berechnung für den Fahrplan-Waggon (Strecke 1) ---
                 const jetzt = new Date();
@@ -213,7 +235,9 @@
                 let fahrplanPos, fahrplanText = "", statusInfo = "";
 
                 if (fortschritt >= 0 && fortschritt < 120) {
-                    fahrplanPos = calculateCurrentPosition(hbahnData.strecke1, fortschritt / 120);
+                    // Hinfahrt: Interpolation über die gesamte Meter-Länge der Strecke
+                    const meterFortschritt = (fortschritt / 120) * laengeStrecke1;
+                    fahrplanPos = getPositionAtDistance(map, hbahnData.strecke1, meterFortschritt);
                     fahrplanText = "Unterwegs nach: <b>Campus Süd</b>";
                     statusInfo = "Fahrt nach Campus Süd 🟢";
                 } else if (fortschritt >= 120 && fortschritt < 180) {
@@ -221,8 +245,10 @@
                     fahrplanText = "Halt in <b>Campus Süd</b><br>Fahrgastwechsel.";
                     statusInfo = "Halt am Campus 🟡";
                 } else if (fortschritt >= 180 && fortschritt < 300) {
+                    // Rückfahrt: Umgedrehte Route nutzen
                     const rueckfahrtRoute = [...hbahnData.strecke1].reverse();
-                    fahrplanPos = calculateCurrentPosition(rueckfahrtRoute, (fortschritt - 180) / 120);
+                    const meterFortschritt = ((fortschritt - 180) / 120) * laengeStrecke1;
+                    fahrplanPos = getPositionAtDistance(map, rueckfahrtRoute, meterFortschritt);
                     fahrplanText = "Unterwegs nach: <b>Eichlinghofen</b>";
                     statusInfo = "Fahrt nach Eichlinghofen 🟢";
                 } else {
@@ -237,27 +263,28 @@
                 document.getElementById("mapStatus").innerHTML = `Fahrplan-Status: ${statusInfo}`;
 
                 // --- B. Berechnung für den schnellen Express-Waggon (Strecke 1) ---
+                // Erhöhung pro Schritt jetzt in echten Metern (z. B. 4 Meter pro 50ms = 80 m/s)
                 if (expressDirection) {
-                    expressProgress += 0.005;
-                    if (expressProgress >= 1) expressDirection = false;
+                    expressProgress += 4; 
+                    if (expressProgress >= laengeStrecke1) expressDirection = false;
                 } else {
-                    expressProgress -= 0.005;
+                    expressProgress -= 4;
                     if (expressProgress <= 0) expressDirection = true;
                 }
-                const expressPos = calculateCurrentPosition(hbahnData.strecke1, expressProgress);
+                const expressPos = getPositionAtDistance(map, hbahnData.strecke1, expressProgress);
                 expressWaggon.setLatLng(expressPos);
                 expressWaggon.getPopup().setContent(`<h3>🚀 Express-Waggon</h3>Ziel: <b>${expressDirection ? "Campus Süd" : "Eichlinghofen"}</b>`);
 
                 // --- C. Berechnung für den Waggon auf Strecke 2 ---
                 if (hbahnData.strecke2 && hbahnData.strecke2.length > 1) {
                     if (strecke2Direction) {
-                        strecke2Progress += 0.003; 
-                        if (strecke2Progress >= 1) strecke2Direction = false;
+                        strecke2Progress += 2.5; // Fährt 2.5 Meter pro Tick
+                        if (strecke2Progress >= laengeStrecke2) strecke2Direction = false;
                     } else {
-                        strecke2Progress -= 0.003;
+                        strecke2Progress -= 2.5;
                         if (strecke2Progress <= 0) strecke2Direction = true;
                     }
-                    const s2Pos = calculateCurrentPosition(hbahnData.strecke2, strecke2Progress);
+                    const s2Pos = getPositionAtDistance(map, hbahnData.strecke2, strecke2Progress);
                     strecke2Waggon.setLatLng(s2Pos);
                     strecke2Waggon.getPopup().setContent(`<h3>🚟 Strecke 2 Waggon</h3>Status: Pendelt auf neuer Route 🔄`);
                 }
