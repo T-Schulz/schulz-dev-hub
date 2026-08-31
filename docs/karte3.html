@@ -85,6 +85,7 @@
 
             // 2. Schienennetz aus hbahn-data.js zeichnen
             L.polyline(hbahnData.strecke1, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
+            L.polyline(hbahnData.strecke2, { color: '#78909c', weight: 6, opacity: 0.5 }).addTo(map);
 
             // 3. Haltestellen zeichnen (Große Kreise)
             hbahnData.haltestellen.forEach(function(stat) {
