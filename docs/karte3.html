@@ -130,7 +130,7 @@
             const punkteLayerGruppe = L.layerGroup();
             let punkteSichtbar = false;
 
-            // Funktion, um die Punkte zu generieren
+            // Funktion, um die Punkte zu generieren (KORRIGIERT: Keine doppelte Anzeige mehr)
             function zeichneStreckenPunkte() {
                 punkteLayerGruppe.clearLayers(); // Altes Zeichnen löschen
 
@@ -146,7 +146,7 @@
                             fillOpacity: 1
                         })
                         .addTo(punkteLayerGruppe)
-                        .bindPopup(`<b>Strecke 1</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0]}, Lng: ${coord[1]}`);
+                        .bindPopup(`<b>Strecke 1</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0].toFixed(5)}<br>Lng: ${coord[1].toFixed(5)}`); // KORREKTUR hier
                     });
                 }
 
@@ -162,7 +162,7 @@
                             fillOpacity: 1
                         })
                         .addTo(punkteLayerGruppe)
-                        .bindPopup(`<b>Strecke 2</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0]}, Lng: ${coord[1]}`);
+                        .bindPopup(`<b>Strecke 2</b><br>Punkt-Index: ${index}<br>Lat: ${coord[0].toFixed(5)}<br>Lng: ${coord[1].toFixed(5)}`); // KORREKTUR hier
                     });
                 }
             }
