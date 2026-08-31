@@ -75,10 +75,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. Karte laden und fokussieren
-            // const map = L.map('map').setView([51.4835, 7.4110], 16);
-            // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
-            // L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
             // 1. Karte laden (ohne festen View)
             const map = L.map('map');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
@@ -104,6 +100,8 @@
                     });
                     return container;
                 }
+            }); // KORREKTUR: Hier wurde die Definition der Control-Klasse geschlossen
+            map.addControl(new CoordControl()); // KORREKTUR: Hier wurde das Element der Karte hinzugefügt
 
             // ====================================================================
             // NEU: STRECKENPUNKTE VISUALISIEREN (ROT)
@@ -167,7 +165,7 @@
                 }
             });
 
-            });
+            
             map.addControl(new CoordControl());
 
             // 2. Schienennetz aus hbahn-data.js zeichnen
