@@ -48,7 +48,7 @@
                 <div id="dashL1Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
                 <div id="dashL1Speed" style="font-size: 0.85rem; color: #27ae60; font-weight: bold; margin-bottom: 5px;">Tempo: 0 km/h</div>
                 <div id="dashL1Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-                <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
+                <a href="https://www.bus-und-bahn.de/fahrplan/hbahn/linie_1/" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 1)</a>
             </div>
 
             <!-- Kachel Express / Test-Waggon -->
@@ -65,7 +65,7 @@
                 <div id="dashL2Status" style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">Berechne Position...</div>
                 <div id="dashL2Speed" style="font-size: 0.85rem; color: #9b59b6; font-weight: bold; margin-bottom: 5px;">Tempo: 0 km/h</div>
                 <div id="dashL2Eta" style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Nächster Halt: --:--</div>
-                <a href="https://bus-und-bahn.de" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
+                <a href="https://www.bus-und-bahn.de/fahrplan/hbahn/linie_2/" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; font-weight: bold;">➡️ Offizieller Fahrplan (Linie 2)</a>
             </div>
         </div>
     </div>
@@ -266,14 +266,14 @@
             const laengeStrecke1 = getRouteLengthInMeters(map, hbahnData.strecke1);
             const laengeStrecke2 = getRouteLengthInMeters(map, hbahnData.strecke2);
 
-            // KORREKTUR: Sichere Tiefenkopie für die Rückfahrten, um Array-Sprünge zu verhindern
+            // Sichere Tiefenkopie für die Rückfahrten (Verhindert Array-Konflikte)
             const rueckfahrtRoute1 = JSON.parse(JSON.stringify(hbahnData.strecke1)).reverse();
             const rueckfahrtRoute2 = JSON.parse(JSON.stringify(hbahnData.strecke2)).reverse();
 
-            // Richtungs-Variablen für den Express-Waggon
+            // Richtungs-Variablen für die Simulation (Einmalig definiert)
             let expressDirection = true;
             let expressProgress = 0;
-
+            
             let strecke2Direction = true;
             let strecke2Progress = 0;
 
@@ -282,87 +282,82 @@
                 const aktuelleMinute = jetzt.getMinutes();
                 const aktuelleSekunde = jetzt.getSeconds();
 
-                // --------------------------------------------------------------------
-                // TIMING & ETA FÜR LINIE 1 (Direkte Minuten-Zuweisung nach Fahrplan)
-                // --------------------------------------------------------------------
-                // Extrahiert die echte, aktuelle Endziffer der Minute (z.B. Minute 24 -> 4, Minute 31 -> 1)
+                // ====================================================================
+                // TIMING & ETA FÜR LINIE 1 (10-Minuten-Takt - Angepasst an Array-Start)
+                // ====================================================================
                 const l1AktuelleMinuteEndziffer = aktuelleMinute % 10;
                 
                 let fahrplanPos, fahrplanText = "", statusInfo = "", etaText = "", speedL1 = 0;
 
-                // --- HINFAHRT: Technologiezentrum -> Eichlinghofen (Minuten 2, 3, 4, 5, 6, 7, 8, 9 bzw. Endziffern 2 bis 9) ---
+                // --- HINFAHRT: Eichlinghofen -> Technologiezentrum (Endziffern .2 bis .9) ---
+                // Da strecke1[0] Eichlinghofen ist, bewegen wir uns hier real von Süd nach Nord!
                 if (l1AktuelleMinuteEndziffer >= 2 && l1AktuelleMinuteEndziffer < 10) {
-                    // Die Fahrt dauert insgesamt 8 Minuten (480 Sekunden)
                     const gesamtSekundenFahrt = ((l1AktuelleMinuteEndziffer - 2) * 60) + aktuelleSekunde;
-                    const fortschritt = gesamtSekundenFahrt / 480;
+                    const fortschritt = gesamtSekundenFahrt / 480; // 8 Minuten Fahrzeit
                     const meter = fortschritt * laengeStrecke1;
                     
+                    // Nutzt die Originalstrecke von Eichlinghofen zum TZ
                     fahrplanPos = getPositionAtDistance(map, hbahnData.strecke1, meter);
-                    statusInfo = "Fahrt Richtung Eichlinghofen 🟢";
+                    statusInfo = "Fahrt Richtung Technologiezentrum 🟢";
                     speedL1 = Math.round((laengeStrecke1 / 480) * 3.6);
 
-                    // Ziele basierend auf den exakten Minuten deiner Rahmendaten setzen:
-                    if (l1AktuelleMinuteEndziffer < 6) {
-                        // Minute 22 bis 26: Auf dem Weg zur Uni
-                        fahrplanText = "Nächster Halt: <b>Dortmund Universität (S)</b>";
-                        const restSekunden = (6 - l1AktuelleMinuteEndziffer) * 60 - aktuelleSekunde;
-                        etaText = `Ankunft Uni (S) in ca.: ${restSekunden}s`;
-                    } else if (l1AktuelleMinuteEndziffer >= 6 && l1AktuelleMinuteEndziffer < 9) {
-                        // Minute 26 bis 29: Auf dem Weg zum Campus Süd
+                    // Ziele auf dem Weg nach Norden (Eichlinghofen -> Campus Süd -> Uni -> TZ)
+                    if (gesamtSekundenFahrt < 120) {
+                        // Erste 2 Minuten: Auf dem Weg zum Campus Süd
                         fahrplanText = "Nächster Halt: <b>Campus Süd</b>";
-                        const restSekunden = (9 - l1AktuelleMinuteEndziffer) * 60 - aktuelleSekunde;
-                        etaText = `Ankunft Campus Süd in ca.: ${restSekunden}s`;
+                        etaText = `Ankunft Campus Süd in ca.: ${120 - gesamtSekundenFahrt}s`;
+                    } else if (gesamtSekundenFahrt >= 120 && gesamtSekundenFahrt < 300) {
+                        // Nächste 3 Minuten: Auf dem Weg zur Uni (S)
+                        fahrplanText = "Nächster Halt: <b>Dortmund Universität (S)</b>";
+                        etaText = `Ankunft Uni (S) in ca.: ${300 - gesamtSekundenFahrt}s`;
                     } else {
-                        // Minute 29 bis 30: Auf dem Weg nach Eichlinghofen
-                        fahrplanText = "Nächster Halt: <b>Eichlinghofen (Endstation)</b>";
-                        const restSekunden = (10 - l1AktuelleMinuteEndziffer) * 60 - aktuelleSekunde;
-                        etaText = `Ankunft Eichlinghofen in ca.: ${restSekunden}s`;
+                        // Letzte 3 Minuten: Auf dem Weg zum Technologiezentrum
+                        fahrplanText = "Nächster Halt: <b>Technologiezentrum (Endstation)</b>";
+                        etaText = `Ankunft Technologiezentrum in ca.: ${480 - gesamtSekundenFahrt}s`;
                     }
                 } 
-                // --- HALT IN EICHLINGHOFEN: Minute 30 (Endziffer 0) ---
+                // --- HALT AM TECHNOLOGIEZENTRUM: Minute .0 ---
                 else if (l1AktuelleMinuteEndziffer === 0) {
+                    // Waggon steht am Ende von Strecke 1 (Technologiezentrum)
                     fahrplanPos = hbahnData.strecke1[hbahnData.strecke1.length - 1];
-                    fahrplanText = "Halt in <b>Eichlinghofen</b>.<br>Fahrgastwechsel.";
-                    statusInfo = "Halt am Bahnsteig Eichlinghofen 🟡";
+                    fahrplanText = "Halt im <b>Technologiezentrum</b>.<br>Fahrgastwechsel.";
+                    statusInfo = "Halt am Bahnsteig (Nord) 🟡";
                     speedL1 = 0;
-                    etaText = `Abfahrt Richtung Technologiezentrum in: ${60 - aktuelleSekunde}s`;
+                    etaText = `Abfahrt Richtung Eichlinghofen in: ${60 - aktuelleSekunde}s`;
                 } 
-                // --- RÜCKFAHRT: Eichlinghofen -> Technologiezentrum (Minuten 1, 2, 3, 4, 5, 6, 7, 8 bzw. Endziffern 1 bis 8 der Folgeminuten) ---
-                // Wichtig: Startet bei Minute 31 (Endziffer 1) und fährt 8 Minuten lang zurück bis Minute 38 (Endziffer 8)
+                // --- RÜCKFAHRT: Technologiezentrum -> Eichlinghofen (Endziffern .1 bis .8 der Folgeminuten) ---
                 else {
-                    // Berechnung der vergangenen Sekunden seit der Abfahrt in Minute 1
                     const gesamtSekundenFahrt = ((l1AktuelleMinuteEndziffer - 1) * 60) + aktuelleSekunde;
                     
-                    if (gesamtSekundenFahrt < 480) { // 8 Minuten Fahrzeit zurück
+                    if (gesamtSekundenFahrt < 480) { // 8 Minuten Rückfahrt
                         const fortschritt = gesamtSekundenFahrt / 480;
                         const meter = fortschritt * laengeStrecke1;
                         
+                        // Nutzt die umgedrehte Route vom TZ zurück nach Eichlinghofen
                         fahrplanPos = getPositionAtDistance(map, rueckfahrtRoute1, meter);
-                        statusInfo = "Rückfahrt Richtung Technologiezentrum 🟢";
+                        statusInfo = "Rückfahrt Richtung Eichlinghofen 🟢";
                         speedL1 = Math.round((laengeStrecke1 / 480) * 3.6);
                         
-                        // Rückfahrt-Ziele basierend auf deinen Dauern (2 Min + 3 Min + 3 Min):
-                        if (gesamtSekundenFahrt < 120) {
-                            // Ersten 2 Minuten (Min 31 bis 33): Zurück zum Campus Süd
-                            fahrplanText = "Nächster Halt: <b>Campus Süd</b>";
-                            etaText = `Ankunft Campus Süd in ca.: ${120 - gesamtSekundenFahrt}s`;
-                        } else if (gesamtSekundenFahrt >= 120 && gesamtSekundenFahrt < 300) {
-                            // Nächsten 3 Minuten (Min 33 bis 36): Zurück zur Uni (S)
+                        // Ziele auf dem Weg nach Süden (TZ -> Uni -> Campus Süd -> Eichlinghofen)
+                        if (gesamtSekundenFahrt < 240) {
+                            // Bis zur Uni
                             fahrplanText = "Nächster Halt: <b>Dortmund Universität (S)</b>";
-                            etaText = `Ankunft Uni (S) in ca.: ${300 - gesamtSekundenFahrt}s`;
+                            etaText = `Ankunft Universität (S) in ca.: ${240 - gesamtSekundenFahrt}s`;
+                        } else if (gesamtSekundenFahrt >= 240 && gesamtSekundenFahrt < 420) {
+                            // Von Uni zum Campus Süd
+                            fahrplanText = "Nächster Halt: <b>Campus Süd</b>";
+                            etaText = `Ankunft Campus Süd in ca.: ${420 - gesamtSekundenFahrt}s`;
                         } else {
-                            // Letzten 3 Minuten (Min 36 bis 38): Zurück zum Technologiezentrum
-                            fahrplanText = "Nächster Halt: <b>Technologiezentrum (Endstation)</b>";
-                            etaText = `Ankunft Technologiezentrum in ca.: ${480 - gesamtSekundenFahrt}s`;
+                            // Endspurt nach Eichlinghofen
+                            fahrplanText = "Nächster Halt: <b>Eichlinghofen (Endstation)</b>";
+                            etaText = `Ankunft Eichlinghofen in ca.: ${480 - gesamtSekundenFahrt}s`;
                         }
                     } else {
-                        // --- PAUSE AM TECHNOLOGIEZENTRUM: Minute 38 bis 42 (Endziffern 8 und 9 nach Ankunft) ---
-                        fahrplanPos = hbahnData.strecke1[0];
-                        fahrplanText = "Wartet im <b>Technologiezentrum</b>.";
-                        statusInfo = "Pause am Technologiezentrum 🔵";
+                        // --- PAUSE IN EICHLINGHOFEN: Bis der Takt bei Endziffer 2 neu startet ---
+                        fahrplanPos = hbahnData.strecke1[0]; // Zurück auf Startposition Eichlinghofen
+                        fahrplanText = "Wartet in <b>Eichlinghofen</b>.";
+                        statusInfo = "Pause am Bahnsteig (Süd) 🔵";
                         speedL1 = 0;
-                        
-                        // Berechnet die Restzeit bis zur nächsten Minute 22 (Endziffer 2)
                         const restSekunden = (l1AktuelleMinuteEndziffer === 8) ? (120 - aktuelleSekunde) : (60 - aktuelleSekunde);
                         etaText = `Nächste Planfahrt in: ${restSekunden}s`;
                     }
@@ -397,13 +392,11 @@
                 // ====================================================================
                 // TIMING & ETA FÜR LINIE 2 (5-Minuten-Takt)
                 // ====================================================================
-                // 2 Min hin (120s) + 1 Min Pause am Nord (60s) + 2 Min zurück (120s) = 300s Gesamtzyklus
                 const l2GesamtSekunden = (aktuelleMinute % 5 * 60) + aktuelleSekunde; 
                 
                 let s2Pos, l2Text = "", l2Status = "", l2Eta = "", speedL2 = 0;
 
                 if (l2GesamtSekunden >= 0 && l2GesamtSekunden < 120) {
-                    // Hinfahrt Campus Süd -> Campus Nord (120 Sekunden)
                     const fortschritt = l2GesamtSekunden / 120;
                     const meter = fortschritt * laengeStrecke2;
                     s2Pos = getPositionAtDistance(map, hbahnData.strecke2, meter);
@@ -413,7 +406,6 @@
                     l2Eta = `Ankunft Nord in: ${120 - l2GesamtSekunden}s`;
 
                 } else if (l2GesamtSekunden >= 120 && l2GesamtSekunden < 180) {
-                    // KORREKTUR: Pause wird jetzt exakt am CAMPUS NORD (Index am Strecken-Ende) gehalten
                     s2Pos = hbahnData.strecke2[hbahnData.strecke2.length - 1]; 
                     l2Text = "Halt in <b>Campus Nord</b>.<br>Fahrgastwechsel.";
                     l2Status = "Pause am Bahnsteig (Nord) 🟡";
@@ -421,7 +413,6 @@
                     l2Eta = `Rückfahrt nach Süd in: ${180 - l2GesamtSekunden}s`;
 
                 } else {
-                    // Rückfahrt Campus Nord -> Campus Süd (120 Sekunden, von Sekunde 180 bis 300)
                     const fortschritt = (l2GesamtSekunden - 180) / 120;
                     const meter = fortschritt * laengeStrecke2;
                     s2Pos = getPositionAtDistance(map, rueckfahrtRoute2, meter);
